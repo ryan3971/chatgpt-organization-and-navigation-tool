@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
 	ReactFlow,
 	ReactFlowProvider,
@@ -12,8 +12,8 @@ import {
 	useOnSelectionChange,
 } from "@xyflow/react";
 
-import dagre from "dagre";
 
+import dagre from "dagre";
 import "@xyflow/react/dist/style.css";
 import "./custom-node.css";
 
@@ -21,6 +21,8 @@ import customNode from "./CustomNode";
 
 import SidePanel from './SidePanel';
 import './SidePanel.css'; // Ensure the path is correct
+
+import { getFromStorage, setToStorage } from "./chromeStorage";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -96,8 +98,7 @@ const Flow = () => {
 	const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 	const [selectedNode, setSelectedNode] = useState(null);
   	const [isPanelOpen, setIsPanelOpen] = useState(false);
-
-	console.log("Selected node:", selectedNode);
+  	const [storageData, setStorageData] = useState(null);
 
 	// The onConnect callback is called whenever a new edge is created. It adds the new edge to the edges array.
 	const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
@@ -156,6 +157,30 @@ const Flow = () => {
 	const togglePanel = () => {
 		setIsPanelOpen(!isPanelOpen);
 	};
+		// The useEffect hook is used to load data from chrome.storage when the component mounts. It calls the getFromStorage function to get the data and updates the storageData state.
+		useEffect(() => {
+			console.log("Fetching data from storage");
+			getFromStorage("myKey")
+				.then((result) => {
+					setStorageData(result);
+					console.log("Data fetched from storage:", result);
+				})
+				.catch((error) => {
+					console.error(error);
+				});
+		}, []);
+
+		// The handleSave function is called when the Save Data button is clicked. It calls the setToStorage function to save data to chrome.storage.
+		const handleSave = () => {
+			console.log("Saving data to storage");
+			setToStorage("myKey", "myValue")
+				.then(() => {
+					console.log("Data saved");
+				})
+				.catch((error) => {
+					console.error(error);
+				});
+		};
 
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.
 	return (
@@ -176,7 +201,8 @@ const Flow = () => {
 					<button onClick={addNode} disabled={!selectedNode}>
 						Add Node
 					</button>
-					<button onClick={() => onLayout("TB")}>vertical layout</button>
+					<button onClick={handleSave}>Save Data</button>
+					<button onClick={() => onLayout("LR")}>horizontal layout</button>
 					<button onClick={() => onLayout("LR")}>horizontal layout</button>
 				</Panel>
 				<Controls />
