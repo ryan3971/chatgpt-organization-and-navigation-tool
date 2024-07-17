@@ -19,6 +19,9 @@ import "./custom-node.css";
 
 import customNode from "./CustomNode";
 
+import SidePanel from './SidePanel';
+import './SidePanel.css'; // Ensure the path is correct
+
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
@@ -88,6 +91,7 @@ const Flow = () => {
 	const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
 	const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 	const [selectedNode, setSelectedNode] = useState(null);
+  	const [isPanelOpen, setIsPanelOpen] = useState(false);
 
 	console.log("Selected node:", selectedNode);
 
@@ -143,9 +147,16 @@ const Flow = () => {
 		[nodes, edges]
 	);
 
+	const togglePanel = () => {
+		setIsPanelOpen(!isPanelOpen);
+	};
+
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.
 	return (
 		<div style={{ width: "100vw", height: "100vh" }}>
+			<button onClick={togglePanel} style={{ marginLeft: "10px" }}>
+				Toggle Side Panel
+			</button>
 			<ReactFlow
 				nodes={nodes}
 				edges={edges}
@@ -166,6 +177,7 @@ const Flow = () => {
 				<MiniMap />
 				<Background variant="dots" gap={12} size={1} />
 			</ReactFlow>
+			<SidePanel isOpen={isPanelOpen} onClose={togglePanel} />
 		</div>
 	);
 };
