@@ -11,9 +11,13 @@ import {
 	addEdge,
 	useOnSelectionChange,
 } from "@xyflow/react";
+
 import dagre from "dagre";
 
 import "@xyflow/react/dist/style.css";
+import "./custom-node.css";
+
+import customNode from "./CustomNode";
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -24,11 +28,16 @@ const nodeHeight = 36;
 const initialNodes = [
 	{
 		id: "1",
-		type: "input",
+		type: "customNode",
+		// set the label of the node
 		data: { label: "Node 1" },
 		position: { x: 250, y: 0 },
 	},
 ];
+// we define the nodeTypes outside of the component to prevent re-renderings
+// you could also use useMemo inside the component
+const nodeTypes = { customNode: customNode};
+
 
 const initialEdges = [];
 
@@ -107,6 +116,7 @@ const Flow = () => {
 		// Create a new node
 		const newNode = {
 			id: `${nodeId++}`,
+			type: "customNode",
 			data: { label: `Node ${nodeId}` },
 			position: { x: selectedNode.position.x + 100, y: selectedNode.position.y + 100 },
 		};
@@ -143,6 +153,7 @@ const Flow = () => {
 				onEdgesChange={onEdgesChange}
 				onConnect={onConnect}
 				onNodeClick={(event, node) => setSelectedNode(node)}
+				nodeTypes={nodeTypes}
 			>
 				<Panel position="top-right">
 					<button onClick={addNode} disabled={!selectedNode}>
