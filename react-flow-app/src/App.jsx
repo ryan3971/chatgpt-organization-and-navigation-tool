@@ -3,7 +3,7 @@ import {
 	ReactFlow,
 	ReactFlowProvider,
 	MiniMap,
-  Panel,
+  	Panel,
 	Controls,
 	Background,
 	useNodesState,
@@ -41,17 +41,19 @@ const initialNodes = [
 // you could also use useMemo inside the component
 const nodeTypes = { customNode: customNode};
 
-
 const initialEdges = [];
 
 let nodeId = 2;
 
+// The getLayoutedElements function is used to layout the nodes and edges using the dagre library. It takes the nodes and edges arrays as input and returns the layouted nodes and edges.
 const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	const isHorizontal = direction === "LR";
 	dagreGraph.setGraph({ rankdir: direction });
 
+	// we need to pass a copy of the nodes to dagre.
 	nodes.forEach((node) => {
-		dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+		const { width, height } = node.data.dimensions || { width: nodeWidth, height: nodeHeight };
+    	dagreGraph.setNode(node.id, { width, height });
 	});
 
 	edges.forEach((edge) => {
@@ -60,6 +62,7 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 
 	dagre.layout(dagreGraph);
 
+	// we need to update the nodes with the calculated positions
 	const newNodes = nodes.map((node) => {
 		const nodeWithPosition = dagreGraph.node(node.id);
 		const newNode = {
@@ -69,8 +72,8 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 			// We are shifting the dagre node position (anchor=center center) to the top left
 			// so it matches the React Flow node anchor point (top left).
 			position: {
-				x: nodeWithPosition.x - nodeWidth / 2,
-				y: nodeWithPosition.y - nodeHeight / 2,
+				x: nodeWithPosition.x - (node.data.dimensions?.width || nodeWidth) / 2,
+				y: nodeWithPosition.y - (node.data.dimensions?.height || nodeHeight) / 2,
 			},
 		};
 
@@ -80,6 +83,7 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	return { nodes: newNodes, edges };
 };
 
+// Layout the initial nodes and edges
 const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
 
 const Flow = () => {
@@ -137,6 +141,7 @@ const Flow = () => {
 		setEdges((eds) => eds.concat(newEdge));
 	};
 
+	// The onLayout function is called when the vertical or horizontal layout buttons are clicked. It layouts the nodes and edges in the specified direction.
 	const onLayout = useCallback(
 		(direction) => {
 			const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, direction);
@@ -147,6 +152,7 @@ const Flow = () => {
 		[nodes, edges]
 	);
 
+	// The togglePanel function is called when the Toggle Side Panel button is clicked. It toggles the isPanelOpen state.
 	const togglePanel = () => {
 		setIsPanelOpen(!isPanelOpen);
 	};
