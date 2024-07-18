@@ -2,6 +2,7 @@ import React from "react";
 import "./SidePanel.css";
 
 const SidePanel = ({ isOpen, onClose }) => {
+	console.log("SidePanel isOpen:", isOpen);
 	return (
 		<div className={`side-panel ${isOpen ? "open" : ""}`}>
 			<button className="close-button" onClick={onClose}>

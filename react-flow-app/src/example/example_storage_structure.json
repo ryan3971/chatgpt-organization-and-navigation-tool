@@ -1,0 +1,74 @@
+{
+	"nodes": [
+		{
+			"id": "1",
+			"type": "default",
+			"position": { "x": 250, "y": 5 },
+			"data": { "label": "Node 1" }
+		},
+		{
+			"id": "2",
+			"type": "default",
+			"position": { "x": 100, "y": 150 },
+			"data": { "label": "Node 2" }
+		},
+		{
+			"id": "3",
+			"type": "default",
+			"position": { "x": 400, "y": 200 },
+			"data": { "label": "Node 3" }
+		}
+	],
+	"edges": [
+		{
+			"id": "e1-2",
+			"source": "1",
+			"target": "2",
+			"type": "default"
+		},
+		{
+			"id": "e2-3",
+			"source": "2",
+			"target": "3",
+			"type": "default"
+		}
+	],
+	"properties": {
+		"nodes": {
+			"1": {
+				"summary": "Summary info for Node 1",
+				"additional": {
+					"customProperty1": "value1",
+					"customProperty2": "value2"
+				}
+			},
+			"2": {
+				"summary": "Summary info for Node 2",
+				"additional": {
+					"customProperty3": "value3"
+				}
+			},
+			"3": {
+				"summary": "Summary info for Node 3",
+				"additional": {
+					"customProperty4": "value4",
+					"customProperty5": "value5"
+				}
+			}
+		},
+		"edges": {
+			"e1-2": {
+				"summary": "Summary info for Edge 1-2",
+				"additional": {
+					"customProperty6": "value6"
+				}
+			},
+			"e2-3": {
+				"summary": "Summary info for Edge 2-3",
+				"additional": {
+					"customProperty7": "value7"
+				}
+			}
+		}
+	}
+}
