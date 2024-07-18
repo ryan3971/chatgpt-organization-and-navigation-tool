@@ -5,6 +5,7 @@
 // This function is used to retrieve data from the Chrome storage. It takes a key as an argument and returns a promise. The promise resolves with the data if successful, or rejects with an error message if there is an error.
 export const getFromStorage = (key) => {
 	return new Promise((resolve, reject) => {
+		// Send a message to the background script to retrieve the data
 		chrome.runtime.sendMessage({ action: "getFromStorage", key }, (response) => {
 			if (response) {
 				resolve(response.data);
@@ -18,6 +19,7 @@ export const getFromStorage = (key) => {
 // This function is used to save data to the Chrome storage. It takes a key and a value as arguments and returns a promise. The promise resolves if successful, or rejects with an error message if there is an error.
 export const setToStorage = (key, value) => {
 	return new Promise((resolve, reject) => {
+		// Send a message to the background script to save the data
 		chrome.runtime.sendMessage({ action: "setToStorage", key, value }, (response) => {
 			if (response && response.success) {
 				resolve();
@@ -44,8 +46,10 @@ export const getAdditionalNodeProperties = (nodeId) => {
 	return new Promise((resolve, reject) => {
 		getFromStorage("flowData")
 			.then((data) => {
-				if (data && data.properties && data.properties.nodes && data.properties.nodes[nodeId]) {
-					resolve(data.properties.nodes[nodeId].additional || {});
+				// Check if the node exists in the flow data using the optional chaining operator and the nullish coalescing operator
+				const additionalProperties = data?.properties?.nodes?.[nodeId]?.additional ?? {};
+				if (additionalProperties) {
+					resolve(additionalProperties);
 				} else {
 					reject("No additional properties found for node");
 				}
@@ -57,9 +61,12 @@ export const getAdditionalNodeProperties = (nodeId) => {
 // This function is used to save additional properties of an edge to the Chrome storage. It takes an edgeId and additional properties as arguments and returns a promise. The promise resolves if successful, or rejects with an error message if there is an error.
 export const updateNodeProperties = (nodeId, newProperties) => {
 	return getFromStorage("flowData").then((data) => {
+
+		// check if the node properties exist in the flow data, if not, create an empty object
 		if (!data.properties.nodes[nodeId]) {
 			data.properties.nodes[nodeId] = { additional: {} };
 		}
+		// merge the new properties with the existing properties
 		data.properties.nodes[nodeId].additional = {
 			...data.properties.nodes[nodeId].additional,
 			...newProperties,
@@ -71,9 +78,12 @@ export const updateNodeProperties = (nodeId, newProperties) => {
 // This function is used to save additional properties of an edge to the Chrome storage. It takes an edgeId and additional properties as arguments and returns a promise. The promise resolves if successful, or rejects with an error message if there is an error.
 export const updateEdgeProperties = (edgeId, newProperties) => {
 	return getFromStorage("flowData").then((data) => {
+
+		// check if the edge properties exist in the flow data, if not, create an empty object
 		if (!data.properties.edges[edgeId]) {
 			data.properties.edges[edgeId] = { additional: {} };
 		}
+		// merge the new properties with the existing properties
 		data.properties.edges[edgeId].additional = {
 			...data.properties.edges[edgeId].additional,
 			...newProperties,

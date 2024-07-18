@@ -12,13 +12,10 @@ import {
 	applyNodeChanges,
 	applyEdgeChanges,
 } from "@xyflow/react";
-
 import dagre from "dagre";
 import "@xyflow/react/dist/style.css";
 
-import "./components/CustomNode/CustomNode.css";
 import customNode from "./components/CustomNode/CustomNode";
-
 import { 
 	loadFlowData, 
 	saveFlowData, 
@@ -27,31 +24,31 @@ import {
 	updateEdgeProperties 
 } from "./backend/chromeStorage";
 
+import ContextMenu from "./components/ContextMenu/ContextMenu";
+import "./components/CustomNode/CustomNode.css";
 
+// Graph layout configuration
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
-
 const nodeWidth = 172;
 const nodeHeight = 36;
 
+// Initial node and edge data
 const initialNodes = [
 	{
 		id: "1",
 		type: "customNode",
-		// set the label of the node
 		data: { label: "Node 1" },
 		position: { x: 250, y: 0 },
 	},
 ];
+
 // we define the nodeTypes outside of the component to prevent re-renderings
-// you could also use useMemo inside the component
-const nodeTypes = { customNode: customNode};
-
 const initialEdges = [];
-
+const nodeTypes = { customNode: customNode};
 let nodeId = 2;
 
-// The getLayoutedElements function is used to layout the nodes and edges using the dagre library. It takes the nodes and edges arrays as input and returns the layouted nodes and edges.
+// Helper function to layout elements
 const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	console.log("Layouting elements with direction:", direction);
 	
@@ -93,22 +90,21 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 };
 
 // Layout the initial nodes and edges
-const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
+//const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
 
 const Flow = ({ togglePanel }) => {
-	/*The useNodesState and useEdgesState hooks are used to manage the nodes and edges arrays. The onNodesChange and onEdgesChange callbacks are called whenever the nodes or edges arrays change.
-  The initialNodes and initialEdges arrays are used to initialize the nodes and edges arrays.
-  The setNodes and setEdges functions are used to update the nodes and edges arrays.
-  The nodes and edges arrays are passed as props to the ReactFlow component.
-  */
 	const [nodes, setNodes] = useNodesState(initialNodes);
 	const [edges, setEdges] = useEdgesState(initialEdges);
 	const [selectedNode, setSelectedNode] = useState(null);
-	
+
 	const [nodeProperties, setNodeProperties] = useState({});
 	const [edgeProperties, setEdgeProperties] = useState({});
 	const [selectedNodeAdditionalProperties, setSelectedNodeAdditionalProperties] = useState(null);
-	
+
+	const [contextMenu, setContextMenu] = useState(null);
+
+	const isDragging = useRef(false);
+
 	// The useEffect hook is used to load the flow data from the Chrome storage when the component mounts. It sets the nodes and edges arrays, as well as the nodeProperties and edgeProperties objects.
 	useEffect(() => {
 		console.log("Loading flow data");
@@ -131,7 +127,9 @@ const Flow = ({ togglePanel }) => {
 		console.log("Nodes change:", changes);
 		setNodes((nds) => {
 			const updatedNodes = applyNodeChanges(changes, nds);
-			saveFlowData(updatedNodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			if (!isDragging.current) {
+				saveFlowData(updatedNodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			}
 			return updatedNodes;
 		});
 	};
@@ -145,7 +143,7 @@ const Flow = ({ togglePanel }) => {
 			return updatedEdges;
 		});
 	};
-	
+
 	// The onConnect function is called when a connection is created between two nodes. It adds the new edge to the edges array and saves the flow data to the Chrome storage.
 	const onConnect = (connection) => {
 		console.log("onConnect", connection);
@@ -154,6 +152,15 @@ const Flow = ({ togglePanel }) => {
 			saveFlowData(nodes, updatedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
 			return updatedEdges;
 		});
+	};
+
+	const onNodeDragStart = () => {
+		isDragging.current = true;
+	};
+
+	const onNodeDragStop = () => {
+		isDragging.current = false;
+		saveFlowData(nodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
 	};
 
 	// The onNodeClick function is called when a node is clicked. It sets the selected node and retrieves the additional properties for the node from the Chrome storage.
@@ -179,7 +186,7 @@ const Flow = ({ togglePanel }) => {
 					[id]: { ...props[id], additional: { ...props[id].additional, ...property } },
 				}));
 			})
-		.catch(console.error);
+			.catch(console.error);
 	};
 
 	// The applyEdgeChanges function is used to apply the changes to the edges array. It takes the changes and the edges array as input and returns the updated edges array.
@@ -241,10 +248,33 @@ const Flow = ({ togglePanel }) => {
 
 			setNodes([...layoutedNodes]);
 			setEdges([...layoutedEdges]);
+			// Save the layouted nodes and edges to the Chrome storage
+			saveFlowData(layoutedNodes, layoutedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+
 		},
 		[nodes, edges]
 	);
-	
+
+
+	const onNodeContextMenu = (event, node) => {
+		event.preventDefault();
+		setSelectedNode(node);
+		setContextMenu({
+			x: event.clientX,
+			y: event.clientY,
+		});
+	};
+
+	const deleteNode = () => {
+		if (selectedNode) {
+			const newNodes = nodes.filter((node) => node.id !== selectedNode.id);
+			const newEdges = edges.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id);
+			setNodes(newNodes);
+			setEdges(newEdges);
+			setContextMenu(null);
+			setSelectedNode(null);
+		}
+	};
 
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.
 	return (
@@ -260,6 +290,9 @@ const Flow = ({ togglePanel }) => {
 				onConnect={onConnect}
 				onNodeClick={onNodeClick}
 				nodeTypes={nodeTypes}
+				onNodeContextMenu={onNodeContextMenu}
+				onNodeDragStart={onNodeDragStart}
+				onNodeDragStop={onNodeDragStop}
 			>
 				<Panel position="top-right">
 					<button onClick={addNode} disabled={!selectedNode}>
@@ -272,6 +305,7 @@ const Flow = ({ togglePanel }) => {
 				<MiniMap />
 				<Background variant="dots" gap={12} size={1} />
 			</ReactFlow>
+			{contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onDelete={deleteNode} />}
 			{selectedNode && selectedNodeAdditionalProperties && (
 				<div>
 					<h3>Additional Properties for {selectedNode.data.label}</h3>
