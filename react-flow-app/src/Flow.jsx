@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
 	ReactFlow,
 	MiniMap,
@@ -16,13 +16,7 @@ import dagre from "dagre";
 import "@xyflow/react/dist/style.css";
 
 import customNode from "./components/CustomNode/CustomNode";
-import { 
-	loadFlowData, 
-	saveFlowData, 
-	getAdditionalNodeProperties, 
-	updateNodeProperties, 
-	updateEdgeProperties 
-} from "./backend/chromeStorage";
+import { loadFlowData, saveFlowData, getAdditionalNodeProperties, updateNodeProperties, updateEdgeProperties } from "./backend/chromeStorage";
 
 import ContextMenu from "./components/ContextMenu/ContextMenu";
 import "./components/CustomNode/CustomNode.css";
@@ -45,13 +39,13 @@ const initialNodes = [
 
 // we define the nodeTypes outside of the component to prevent re-renderings
 const initialEdges = [];
-const nodeTypes = { customNode: customNode};
+const nodeTypes = { customNode: customNode };
 let nodeId = 2;
 
 // Helper function to layout elements
 const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	console.log("Layouting elements with direction:", direction);
-	
+
 	// we create a new dagre graph with the direction
 	const isHorizontal = direction === "LR";
 	dagreGraph.setGraph({ rankdir: direction });
@@ -59,7 +53,7 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	// we need to pass a copy of the nodes to dagre.
 	nodes.forEach((node) => {
 		const { width, height } = node.data.dimensions || { width: nodeWidth, height: nodeHeight };
-    	dagreGraph.setNode(node.id, { width, height });
+		dagreGraph.setNode(node.id, { width, height });
 	});
 
 	edges.forEach((edge) => {
@@ -93,6 +87,16 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 //const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
 
 const Flow = ({ togglePanel }) => {
+	/*
+        node (node object):                      { id: string, type: string, position: { x: number, y: number }, data: { label: string } }
+        edge (edge object):                      { id: string, source: string, target: string }
+        selectedNode (node object):              { id: string, type: string, position: { x: number, y: number }, data: { label: string } }
+        nodeProperties (node properties object): { [nodeId: string]: { additional: { [key: string]: any } } }
+        edgeProperties (edge properties object): { [edgeId: string]: { additional: { [key: string]: any } } }
+        selectedNodeAdditionalProperties:        { [key: string]: any }
+        contextMenu (dict):                      { x: number, y: number }
+    */
+
 	const [nodes, setNodes] = useNodesState(initialNodes);
 	const [edges, setEdges] = useEdgesState(initialEdges);
 	const [selectedNode, setSelectedNode] = useState(null);
@@ -120,105 +124,10 @@ const Flow = ({ togglePanel }) => {
 			.catch((error) => {
 				console.error(error);
 			});
-	}, []);
-
-	// The applyNodeChanges function is used to apply the changes to the nodes array. It takes the changes and the nodes array as input and returns the updated nodes array.
-	const onNodesChange = (changes) => {
-		console.log("Nodes change:", changes);
-		setNodes((nds) => {
-			const updatedNodes = applyNodeChanges(changes, nds);
-			if (!isDragging.current) {
-				saveFlowData(updatedNodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
-			}
-			return updatedNodes;
-		});
-	};
-
-	// The applyEdgeChanges function is used to apply the changes to the edges array. It takes the changes and the edges array as input and returns the updated edges array.
-	const onEdgesChange = (changes) => {
-		console.log("Edges change:", changes);
-		setEdges((eds) => {
-			const updatedEdges = applyEdgeChanges(changes, eds);
-			saveFlowData(nodes, updatedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
-			return updatedEdges;
-		});
-	};
-
-	// The onConnect function is called when a connection is created between two nodes. It adds the new edge to the edges array and saves the flow data to the Chrome storage.
-	const onConnect = (connection) => {
-		console.log("onConnect", connection);
-		setEdges((eds) => {
-			const updatedEdges = addEdge(connection, eds);
-			saveFlowData(nodes, updatedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
-			return updatedEdges;
-		});
-	};
-
-	const onNodeDragStart = () => {
-		isDragging.current = true;
-	};
-
-	const onNodeDragStop = () => {
-		isDragging.current = false;
-		saveFlowData(nodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
-	};
-
-	// The onNodeClick function is called when a node is clicked. It sets the selected node and retrieves the additional properties for the node from the Chrome storage.
-	const onNodeClick = useCallback((event, node) => {
-		console.log("Selected node:", node);
-		setSelectedNode(node);
-		getAdditionalNodeProperties(node.id)
-			.then((additionalProperties) => {
-				setSelectedNodeAdditionalProperties(additionalProperties);
-			})
-			.catch((error) => {
-				console.error(error);
-			});
-	}, []);
-
-	// The applyNodeChanges function is used to apply the changes to the nodes array. It takes the changes and the nodes array as input and returns the updated nodes array.
-	const handleUpdateNodeProperty = (id, property) => {
-		console.log("Updating node property:", id, property);
-		updateNodeProperties(id, property)
-			.then(() => {
-				setNodeProperties((props) => ({
-					...props,
-					[id]: { ...props[id], additional: { ...props[id].additional, ...property } },
-				}));
-			})
-			.catch(console.error);
-	};
-
-	// The applyEdgeChanges function is used to apply the changes to the edges array. It takes the changes and the edges array as input and returns the updated edges array.
-	const handleUpdateEdgeProperty = (id, property) => {
-		console.log("Updating edge property:", id, property);
-		updateEdgeProperties(id, property)
-			.then(() => {
-				setEdgeProperties((props) => ({
-					...props,
-					[id]: { ...props[id], additional: { ...props[id].additional, ...property } },
-				}));
-			})
-			.catch(console.error);
-	};
-
-	// The onSelectionChange hook is used to listen to the selection change event. The onChange callback is called whenever the selection changes.
-	const onChange = useCallback(({ nodes }) => {
-		console.log("Selected node 2:", selectedNode);
-		if (nodes.length === 0) {
-			setSelectedNode(null);
-		} else {
-			setSelectedNode(nodes[0]);
-		}
-	});
-
-	// The useOnSelectionChange hook is used to listen to the selection change event. The onChange callback is called whenever the selection changes.
-	useOnSelectionChange({
-		onChange,
-	});
+	}, [setNodes, setEdges]);
 
 	// The addNode function is called when the Add Node button is clicked. It creates a new node and edge and adds them to the nodes and edges arrays.
-	const addNode = () => {
+	const addNode = useCallback(() => {
 		if (!selectedNode) return;
 
 		// Create a new node
@@ -239,10 +148,72 @@ const Flow = ({ togglePanel }) => {
 		// Add the new node and edge to the nodes and edges arrays
 		setNodes((nds) => nds.concat(newNode));
 		setEdges((eds) => eds.concat(newEdge));
+	}, [setNodes, setEdges, selectedNode]);
+
+	// The onConnect function is called when a connection is created between two nodes. It adds the new edge to the edges array and saves the flow data to the Chrome storage.
+	const onConnect = (connection) => {
+		console.log("onConnect", connection);
+		setEdges((eds) => {
+			const updatedEdges = addEdge(connection, eds);
+			saveFlowData(nodes, updatedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			return updatedEdges;
+		});
+	};
+
+	/*
+    Used in the context of the React Flow library to handle the event when one or more nodes are deleted from the graph. 
+    This function is called automatically by React Flow when a delete action is performed on nodes, such as through user interaction (e.g., pressing the delete key).
+    */
+	const onNodesDelete = useCallback(
+		(nodesToDelete) => {
+			setNodes((nds) => nds.filter((node) => !nodesToDelete.includes(node)));
+		},
+		[setNodes]
+	);
+
+	const onEdgesDelete = useCallback(
+		(edgesToDelete) => {
+			setEdges((eds) => eds.filter((edge) => !edgesToDelete.includes(edge)));
+		},
+		[setEdges]
+	);
+
+	// The applyNodeChanges function is used to apply the changes to the nodes array. It takes the changes and the nodes array as input and returns the updated nodes array.
+	const onNodesChange = (changes) => {
+		console.log("onNodesChange: ", changes);
+		setNodes((nds) => {
+			const updatedNodes = applyNodeChanges(changes, nds);
+			if (!isDragging.current) {
+				saveFlowData(updatedNodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			}
+			return updatedNodes;
+		});
+	};
+
+	// The applyEdgeChanges function is used to apply the changes to the edges array. It takes the changes and the edges array as input and returns the updated edges array.
+	const onEdgesChange = (changes) => {
+		console.log("onEdgesChange: ", changes);
+		setEdges((eds) => {
+			const updatedEdges = applyEdgeChanges(changes, eds);
+			saveFlowData(nodes, updatedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			return updatedEdges;
+		});
+	};
+
+	const onNodeDragStart = () => {
+		console.log("onNodeDragStart");
+		isDragging.current = true;
+	};
+
+	const onNodeDragStop = () => {
+		console.log("onNodeDragStop");
+		isDragging.current = false;
+		saveFlowData(nodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
 	};
 
 	// The onLayout function is called when the vertical or horizontal layout buttons are clicked. It layouts the nodes and edges in the specified direction.
 	const onLayout = useCallback(
+		console.log("onLayout"),
 		(direction) => {
 			const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, direction);
 
@@ -250,15 +221,32 @@ const Flow = ({ togglePanel }) => {
 			setEdges([...layoutedEdges]);
 			// Save the layouted nodes and edges to the Chrome storage
 			saveFlowData(layoutedNodes, layoutedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
-
 		},
 		[nodes, edges]
 	);
 
+	// The onSelectionChange hook is used to listen to the selection change event. The onChange callback is called whenever the selection changes.
+	const onChange = useCallback(({ nodes }) => {
+		console.log("onChange: ", nodes);
+		if (nodes.length === 0) {
+			setSelectedNode(null);
+		} else {
+			setSelectedNode(nodes[0]);
+			// 	getAdditionalNodeProperties(nodes[0].id).then(setSelectedNodeAdditionalProperties);
+		}
+		console.log("onChange - selectedNode: ", selectedNode);
+	});
+
+	// The useOnSelectionChange hook is used to listen to the selection change event. The onChange callback is called whenever the selection changes.
+	// Need to have it like this to work!
+	useOnSelectionChange({
+		onChange,
+	});
 
 	const onNodeContextMenu = (event, node) => {
+		console.log("onNodeContextMenu: ", node);
 		event.preventDefault();
-		setSelectedNode(node);
+		setSelectedNode(node); // Might not need this is right-click counts as click (so it calls onNodeCLick)
 		setContextMenu({
 			x: event.clientX,
 			y: event.clientY,
@@ -266,14 +254,55 @@ const Flow = ({ togglePanel }) => {
 	};
 
 	const deleteNode = () => {
+		console.log("deleteNode: ", selectedNode);
 		if (selectedNode) {
 			const newNodes = nodes.filter((node) => node.id !== selectedNode.id);
 			const newEdges = edges.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id);
 			setNodes(newNodes);
 			setEdges(newEdges);
 			setContextMenu(null);
-			setSelectedNode(null);
+			//    setSelectedNode(null);
 		}
+	};
+
+	// The onNodeClick function is called when a node is clicked. It sets the selected node and retrieves the additional properties for the node from the Chrome storage.
+	// Need this since useOnSelectionChange not called when node is clicked
+	const onNodeClick = useCallback((event, node) => {
+		console.log("onNodeClick: ", node);
+		setSelectedNode(node);
+		getAdditionalNodeProperties(node.id)
+			.then((additionalProperties) => {
+				setSelectedNodeAdditionalProperties(additionalProperties);
+			})
+			.catch((error) => {
+				console.error(error);
+			});
+	}, []);
+
+	// The applyNodeChanges function is used to apply the changes to the nodes array. It takes the changes and the nodes array as input and returns the updated nodes array.
+	const handleUpdateNodeProperty = (id, property) => {
+		console.log("handleUpdateNodeProperty: ", id, property);
+		updateNodeProperties(id, property)
+			.then(() => {
+				setNodeProperties((props) => ({
+					...props,
+					[id]: { ...props[id], additional: { ...props[id].additional, ...property } },
+				}));
+			})
+			.catch(console.error);
+	};
+
+	// The applyEdgeChanges function is used to apply the changes to the edges array. It takes the changes and the edges array as input and returns the updated edges array.
+	const handleUpdateEdgeProperty = (id, property) => {
+		console.log("handleUpdateEdgeProperty: ", id, property);
+		updateEdgeProperties(id, property)
+			.then(() => {
+				setEdgeProperties((props) => ({
+					...props,
+					[id]: { ...props[id], additional: { ...props[id].additional, ...property } },
+				}));
+			})
+			.catch(console.error);
 	};
 
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.
@@ -285,11 +314,11 @@ const Flow = ({ togglePanel }) => {
 			<ReactFlow
 				nodes={nodes}
 				edges={edges}
+				nodeTypes={nodeTypes}
 				onNodesChange={onNodesChange}
 				onEdgesChange={onEdgesChange}
 				onConnect={onConnect}
 				onNodeClick={onNodeClick}
-				nodeTypes={nodeTypes}
 				onNodeContextMenu={onNodeContextMenu}
 				onNodeDragStart={onNodeDragStart}
 				onNodeDragStop={onNodeDragStop}
@@ -318,4 +347,4 @@ const Flow = ({ togglePanel }) => {
 	);
 };
 
-export default Flow
+export default Flow;
