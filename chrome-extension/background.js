@@ -1,5 +1,28 @@
 import { sendMessageToTab, setToStorage, getFromStorage } from "./chromeStorage.js";
 
+const test_new_node = [
+	{
+		node_parent_id: "",
+		node_branch_id: "test_is",
+		node_branch_title: "text",
+		edge_selected_text: "sample_title",
+	},
+];
+
+const test_nodes = [
+	{
+		node_id: "1",
+		node_type: "default",
+		node_position: { x: 250, y: 5 },
+		node_data: {
+			node_data_title: "Node 1",
+		},
+	},
+];
+
+const chatgpt_hostname = "chatgpt.com";
+
+
 // Variable used for state management
 let state = {
 	state: {
@@ -41,19 +64,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 	console.log("Context menu item clicked:", info, tab);
 	if (info.menuItemId === "saveHighlightedText") {
 		const selectedText = info.selectionText;
-		const url = info.pageUrl;
+		const url = new URL(info.pageUrl);
 
-		// Get the title of the page using a content script
-
-		// send a message to the tab to get the document title. This infomrmation should return before proceeding
-		// sendMessageToTab(tab.id, { action: "extractTitle" })
-		// 	.then((response) => {
-		// 		console.log("Page Title:", response.title);
-		// 		titleText = response.title;
-		// 	})
-		// 	.catch((error) => {
-		// 		console.error("Error extracting title:", error);
-		// 	});
+		//const hostname = url.hostname; // e.g., https://chatgpt.com
+		const chat_id = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
 
 		let titleText = "";
 		try {
@@ -64,95 +78,116 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 		}
 
 		console.log("Selected text:", selectedText);
-		console.log("URL:", url);
+		console.log("Pathname:", chat_id);
 
 		// Format the data as specified
-		const newNode = {
-			parent_id: url,
-			branch_id: "",
-			titleText: titleText,
-			selectedtext: selectedText,
+		const new_node = {
+			node_parent_id: chat_id,
+			node_branch_id: "",
+			node_branch_title: titleText,
+			edge_selected_text: selectedText,
 		};
 
 		// temporary code to test the storage (reset the storage)
-		let response = await setToStorage({"newNodes": []});
+		let response = await setToStorage({ new_node: test_new_node });
+		response = await setToStorage({ nodes: test_nodes });
+
+		//	const updatedNewNodes = newNodes ? [...newNodes, newNode] : [newNode];
+		// Add the new object to the existing array. If newNodes is undefined (i.e., no data in storage), initialize the array with the new object.
 
 		// Retrieve the newNodes from storage
-		const newNodes_data = await getFromStorage("newNodes");
-		console.log("Data retrieved from storage:", newNodes_data);
+		let new_node_stor = await getFromStorage("new_node");
+		new_node_stor = new_node_stor["new_node"];
+		console.log("Data retrieved from storage:", new_node_stor);
+
+		const updated_new_node_stor = new_node_stor ? [...new_node_stor, new_node] : [new_node];
 
 		// Add the newNode to the newNodes_data array
-		newNodes_data["newNodes"].push(newNode);
+		//newNodes_data["newNodes"].push(newNode);
 
 		// Save the newNode to storage
-		response = await setToStorage({"newNodes": newNodes_data});
+		response = await setToStorage({ new_node: updated_new_node_stor });
 		console.log("Data saved to storage:", response);
 
 		// Set the state to indicate a new node has been created
 		state.state.new_node = true;
+
+		// Ope na new ChatGPT chat in the current tab
+
+		// Launch the new chat
+		const newUrl = chatgpt_hostname;
+
+		// Query the active tab
+		// chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+		// 	const activeTab = tabs[0];
+
+		// 	// Update the active tab with the new URL
+		// 	chrome.tabs.update(tab.id, { url: newUrl }, () => {
+		// 		sendResponse({ status: "success" });
+		// 	});
+		// });
 	}
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.webNavigation.onCommitted.addListener((details) => {
+	if (details.frameId === 0) {
+		// frameId 0 indicates the main frame
+		console.log("User navigated to a new page:", details.url);
+	}
+});
+
+
+chrome.tabs.onUpdated.addListener( async (tabId, changeInfo, tab) => {
 	// URL has changed. Check if a newNode is in storage and the url satisfies the conditions
 	if (changeInfo.url && state.state.new_node) {
+		// Check if the URL already exists in the database
+		const url = new URL(changeInfo.url);
+
+		const hostname = url.hostname; // e.g., https://chatgpt.com
+		const chat_id = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
+
+		// check if hostname is chatgpt and chat_id is empty
+		if (hostname === chatgpt_hostname && chat_id === "/") {
+			console.log("URL is a new ChatGPT page:", url);
+			return;
+		}
 		// Either we have new chat that is a branch or we have navigated to a new page
 		state.state.new_node = false;
 
-		// retrieve the newNode from storage and node from storage
-		chrome.storage.local.get(["newNodes", "nodes"], (result) => {
-			const newNodes = result.newNodes;
-			const nodes = result.nodes;
+		const stor = await getFromStorage(["new_node", "nodes"]);
+		let new_node_stor = stor["new_node"];
+		let nodes_stor = stor["nodes"];
 
-			// Check if the URL already exists in the database
-			const url = new URL(changeInfo.url);
-			const relativeUrl = url.pathname + url.search + url.hash;
+		// Check if the URL already exists in the database for nodes and newNodes
+		// If no matching element is found, isExistingNode will be assigned the value undefined.
+		const isExistingNode = nodes_stor.find((node) => node.node_id === chat_id);
+		const isExistingNode_2 = new_node_stor.find((node) => node.node_parent_id === chat_id);
 
-			// Check if the URL already exists in the database
-			const existingNode = nodes.find((node) => node.id === relativeUrl);
+		// Check if the URL is a ChatGPT conversation page, the url has a branch_id, and the node doesn't exist
+		if (hostname === chatgpt_hostname && chat_id.startsWith("/c/") && !isExistingNode) {
+			// We have a new chat that is a branch.
+			console.log("URL is a ChatGPT conversation page:", url);
 
-			// Check if the URL is a ChatGPT conversation page, the url has a branch_id, and the node doesn't exist
-			if (url.hostname === "https://chatgpt.com/" && relativeUrl.startsWith("/c/") && !existingNode) {
-				// We have a new chat that is a branch.
-				console.log("URL is a ChatGPT conversation page:", url);
+			// search the new_node_stor for an element with an empty branch_id and return the element index
+			const index = new_node_stor.findIndex((node) => !node.node_branch_id);
 
-				// Search the newNode for an element with an empty branch_id and update it
-				const newNode = newNodes.find((newNode) => !newNode.branch_id);
-				if (newNode) {
-					newNode.branch_id = relativeUrl;
-					console.log("Updated newNode:", newNode);
+			if (index) {
+				new_node_stor[index].branch_id = chat_id;
+				console.log("Updated newNode:", new_node_stor[index].branch_id);
 
-					// Save the updated newNode to storage
-					chrome.storage.local.set({ newNodes: newNodes }, () => {
-						console.log("Data saved to storage:", newNodes);
-					});
-				} else {
-					// No newNode with an empty branch_id found
-					console.log("No newNode with an empty branch_id found/ This should not happen...");
-				}
+				let response = await setToStorage({ new_node: new_node_stor });
+				console.log("Node branch ID updated to storage:", response);
 			} else {
-				// We have navigated to a new page or chat; remove the newNode element with an empty branch_id from storage
-				const newNodes = newNodes.filter((newNode) => newNode.branch_id); // Remove the newNode with an empty branch_id (check if truthy)
-				chrome.storage.local.set({ newNodes: newNodes }, () => {
-					console.log("Data saved to storage:", newNodes);
-				});
+				// No newNode with an empty branch_id found
+				console.log("No newNode with an empty branch_id found. This should not happen...");
 			}
-		});
+		} else {
+			// We have navigated to a new page or chat; remove the newNode element with an empty branch_id from storage
+			const updated_new_node_stor = new_node_stor.filter((node) => node.node_branch_id); // Remove the newNode with an empty branch_id (check if truthy)
 
-		// Retrieve the newNode from storage. It could be a list of newNodes
-		chrome.storage.local.get("newNodes", (result) => {
-			const newNodes = result.newNodes;
-			if (newNodes) {
-				console.log("New nodes found in storage:", newNodes);
-			}
-
-			// Iterate through the newNodes and check if any have an empty branch_id
-			newNodes.forEach((newNode) => {
-				if (!newNode.branch_id) {
-					console.log("Found a new node with an empty branch_id:", newNode);
-				}
-			});
-		});
+			let response = await setToStorage({ new_node: updated_new_node_stor });
+			console.log("New Node branch removed from storage", response);
+		}
 	}
 });
 

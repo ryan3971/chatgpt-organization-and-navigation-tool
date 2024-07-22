@@ -84,7 +84,7 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 };
 
 // Layout the initial nodes and edges
-//const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
+const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
 
 const Flow = ({ togglePanel }) => {
 	/*
@@ -97,8 +97,8 @@ const Flow = ({ togglePanel }) => {
         contextMenu (dict):                      { x: number, y: number }
     */
 
-	const [nodes, setNodes] = useNodesState(initialNodes);
-	const [edges, setEdges] = useEdgesState(initialEdges);
+	const [nodes, setNodes] = useNodesState(layoutedNodes);
+	const [edges, setEdges] = useEdgesState(layoutedEdges);
 	const [selectedNode, setSelectedNode] = useState(null);
 
 	const [nodeProperties, setNodeProperties] = useState({});
@@ -107,6 +107,7 @@ const Flow = ({ togglePanel }) => {
 
 	const [contextMenu, setContextMenu] = useState(null);
 
+	const contextMenuRef = useRef(null);
 	const isDragging = useRef(false);
 
 	// The useEffect hook is used to load the flow data from the Chrome storage when the component mounts. It sets the nodes and edges arrays, as well as the nodeProperties and edgeProperties objects.
@@ -125,6 +126,20 @@ const Flow = ({ togglePanel }) => {
 				console.error(error);
 			});
 	}, [setNodes, setEdges]);
+
+	// The hideContextMenu function is called to hide the context menu when the user clicks outside of it.
+	useEffect(() => {
+		const handleClickOutside = (event) => {
+			if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
+				hideContextMenu();
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, []);
 
 	// The addNode function is called when the Add Node button is clicked. It creates a new node and edge and adds them to the nodes and edges arrays.
 	const addNode = useCallback(() => {
@@ -213,14 +228,13 @@ const Flow = ({ togglePanel }) => {
 
 	// The onLayout function is called when the vertical or horizontal layout buttons are clicked. It layouts the nodes and edges in the specified direction.
 	const onLayout = useCallback(
-		console.log("onLayout"),
 		(direction) => {
 			const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, direction);
 
 			setNodes([...layoutedNodes]);
 			setEdges([...layoutedEdges]);
 			// Save the layouted nodes and edges to the Chrome storage
-			saveFlowData(layoutedNodes, layoutedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			//saveFlowData(layoutedNodes, layoutedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
 		},
 		[nodes, edges]
 	);
@@ -330,11 +344,11 @@ const Flow = ({ togglePanel }) => {
 					<button onClick={() => onLayout("TB")}>vertical layout</button>
 					<button onClick={() => onLayout("LR")}>horizontal layout</button>
 				</Panel>
+				{contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onDelete={deleteNode} />}
 				<Controls />
 				<MiniMap />
 				<Background variant="dots" gap={12} size={1} />
 			</ReactFlow>
-			{contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onDelete={deleteNode} />}
 			{selectedNode && selectedNodeAdditionalProperties && (
 				<div>
 					<h3>Additional Properties for {selectedNode.data.label}</h3>

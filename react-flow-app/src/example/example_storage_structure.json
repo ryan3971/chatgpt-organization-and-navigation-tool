@@ -1,38 +1,48 @@
 {
+	"state": {
+		"new_node": false
+	},
+	
+	"new_node": [
+		{
+			"node_parent_id": "1",
+			"node_branch_id": "3",
+			"node_branch_title": "Node 3",
+			"edge_selected_text": "Selected text for Edge 2-3"
+		}
+	],
 	"nodes": [
 		{
-			"id": "1",
-			"type": "default",
-			"position": { "x": 250, "y": 5 },
-			"data": { "label": "Node 1" }
+			"node_id": "1",
+			"node_type": "default",
+			"node_position": { "x": 250, "y": 5 },
+			"node_data": {
+				"node_data_title": "Node 1"
+			}
 		},
 		{
-			"id": "2",
-			"type": "default",
-			"position": { "x": 100, "y": 150 },
-			"data": { "label": "Node 2" }
-		},
-		{
-			"id": "3",
-			"type": "default",
-			"position": { "x": 400, "y": 200 },
-			"data": { "label": "Node 3" }
+			"node_id": "2",
+			"node_type": "default",
+			"node_position": { "x": 250, "y": 5 },
+			"node_data": {
+				"node_data_title": "Node 2"
+			}
 		}
 	],
 	"edges": [
 		{
-			"id": "e1-2",
-			"source": "1",
-			"target": "2",
-			"type": "default"
-		},
-		{
-			"id": "e2-3",
-			"source": "2",
-			"target": "3",
-			"type": "default"
+			"edge_id": "e1-2",
+			"edge_source": "1",
+			"edge_target": "2",
+			"type": "default",
+			"edge_data": {
+				"edge_data_selected_text": "Selected text for Edge 1-2"
+			}
 		}
 	],
+
+
+
 	"properties": {
 		"nodes": {
 			"1": {

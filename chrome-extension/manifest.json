@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "Your Extension Name",
 	"version": "1.0",
-	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus"],
+	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus", "webNavigation"],
 	"background": {
 		"service_worker": "background.js",
 		"type": "module"
