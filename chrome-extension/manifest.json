@@ -2,13 +2,14 @@
 	"manifest_version": 3,
 	"name": "Your Extension Name",
 	"version": "1.0",
-	"permissions": ["storage", "tabs"],
+	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus", "webNavigation"],
 	"background": {
-		"service_worker": "background.js"
+		"service_worker": "background.js",
+		"type": "module"
 	},
 	"content_scripts": [
 		{
-			"matches": ["<all_urls>"],
+			"matches": ["https://chatgpt.com/*"],
 			"js": ["content.js"]
 		}
 	],
