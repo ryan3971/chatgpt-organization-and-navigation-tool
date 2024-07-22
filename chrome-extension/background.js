@@ -70,12 +70,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 		const chat_id = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
 
 		let titleText = "";
-		try {
-			const response = await sendMessageToTab(tab.id, { action: "extractTitle" });
-			titleText = response.title;
-		} catch (error) {
-			console.error("Error extracting title:", error);
-		}
+		let response = await sendMessageToTab(tab.id, { action: "extractTitle" });
+		titleText = response.title;
+
 
 		console.log("Selected text:", selectedText);
 		console.log("Pathname:", chat_id);
@@ -89,7 +86,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 		};
 
 		// temporary code to test the storage (reset the storage)
-		let response = await setToStorage({ new_node: test_new_node });
+		response = await setToStorage({ new_node: test_new_node });
 		response = await setToStorage({ nodes: test_nodes });
 
 		//	const updatedNewNodes = newNodes ? [...newNodes, newNode] : [newNode];
@@ -115,30 +112,38 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 		// Ope na new ChatGPT chat in the current tab
 
 		// Launch the new chat
-		const newUrl = chatgpt_hostname;
+		const newUrl = "https://chatgpt.com/"//chatgpt_hostname;
 
-		// Query the active tab
-		// chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-		// 	const activeTab = tabs[0];
-
-		// 	// Update the active tab with the new URL
-		// 	chrome.tabs.update(tab.id, { url: newUrl }, () => {
-		// 		sendResponse({ status: "success" });
-		// 	});
-		// });
+		//Query the active tab
+		try {
+			chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+				const activeTab = tabs[0];
+				chrome.tabs.update(tab.id, { url: newUrl });
+				console.log("Opened new ChatGPT chat in the current tab", newUrl);
+			});
+		} catch (error) {
+			console.error("Error occurred while updating tab URL:", error);
+		}
 	}
 });
 
-chrome.webNavigation.onCommitted.addListener((details) => {
-	if (details.frameId === 0) {
-		// frameId 0 indicates the main frame
-		console.log("User navigated to a new page:", details.url);
-	}
-});
+// chrome.webNavigation.onCommitted.addListener((details) => {
+// 	if (details.frameId === 0) {
+// 		// frameId 0 indicates the main frame
+// 		console.log("User navigated to a new page:", details.url);
+// 	}
+// });
 
 
 chrome.tabs.onUpdated.addListener( async (tabId, changeInfo, tab) => {
 	// URL has changed. Check if a newNode is in storage and the url satisfies the conditions
+	// For now, the following will be used to register a new branch
+		// The branch button is clicked
+		// A new chat is launched
+		// We monitor a change in the url
+			// when it changes, we check the usual + the chat title
+				// If the url changed to an id but the chat title is still ChatGPT, then we know (I think) that we are using the branched chat
+
 	if (changeInfo.url && state.state.new_node) {
 		// Check if the URL already exists in the database
 		const url = new URL(changeInfo.url);
@@ -160,11 +165,18 @@ chrome.tabs.onUpdated.addListener( async (tabId, changeInfo, tab) => {
 
 		// Check if the URL already exists in the database for nodes and newNodes
 		// If no matching element is found, isExistingNode will be assigned the value undefined.
-		const isExistingNode = nodes_stor.find((node) => node.node_id === chat_id);
-		const isExistingNode_2 = new_node_stor.find((node) => node.node_parent_id === chat_id);
+		//const isExistingNode = nodes_stor.find((node) => node.node_id === chat_id);
+		//const isExistingNode_2 = new_node_stor.find((node) => node.node_parent_id === chat_id);
 
-		// Check if the URL is a ChatGPT conversation page, the url has a branch_id, and the node doesn't exist
-		if (hostname === chatgpt_hostname && chat_id.startsWith("/c/") && !isExistingNode) {
+		let response = await sendMessageToTab(tab.id, { action: "extractTitle" });
+		const titleText = response.title;
+
+
+		// Check the following:
+			// 1) if the URL is a ChatGPT conversation page
+			// 2) the url has an id (meaning the chat page has been used)
+			// 3) The chat title is "ChatGPT"
+		if (hostname === chatgpt_hostname && chat_id.startsWith("/c/") && titleText === "ChatGPT") {
 			// We have a new chat that is a branch.
 			console.log("URL is a ChatGPT conversation page:", url);
 
