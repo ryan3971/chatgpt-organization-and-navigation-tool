@@ -86,24 +86,24 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 		};
 
 		// temporary code to test the storage (reset the storage)
-		response = await setToStorage({ new_node: test_new_node });
+		response = await setToStorage({ new_nodes: test_new_node });
 		response = await setToStorage({ nodes: test_nodes });
 
 		//	const updatedNewNodes = newNodes ? [...newNodes, newNode] : [newNode];
 		// Add the new object to the existing array. If newNodes is undefined (i.e., no data in storage), initialize the array with the new object.
 
 		// Retrieve the newNodes from storage
-		let new_node_stor = await getFromStorage("new_node");
-		new_node_stor = new_node_stor["new_node"];
-		console.log("Data retrieved from storage:", new_node_stor);
+		let new_nodes_stor = await getFromStorage("new_nodes");
+		new_nodes_stor = new_nodes_stor["new_nodes"];
+		console.log("Data retrieved from storage:", new_nodes_stor);
 
-		const updated_new_node_stor = new_node_stor ? [...new_node_stor, new_node] : [new_node];
+		const updated_new_nodes_stor = new_nodes_stor ? [...new_nodes_stor, new_node] : [new_node];
 
 		// Add the newNode to the newNodes_data array
 		//newNodes_data["newNodes"].push(newNode);
 
 		// Save the newNode to storage
-		response = await setToStorage({ new_node: updated_new_node_stor });
+		response = await setToStorage({ new_nodes: updated_new_nodes_stor });
 		console.log("Data saved to storage:", response);
 
 		// Set the state to indicate a new node has been created
@@ -159,8 +159,8 @@ chrome.tabs.onUpdated.addListener( async (tabId, changeInfo, tab) => {
 		// Either we have new chat that is a branch or we have navigated to a new page
 		state.state.new_node = false;
 
-		const stor = await getFromStorage(["new_node", "nodes"]);
-		let new_node_stor = stor["new_node"];
+		const stor = await getFromStorage(["new_nodes", "nodes"]);
+		let new_nodes_stor = stor["new_nodes"];
 		let nodes_stor = stor["nodes"];
 
 		// Check if the URL already exists in the database for nodes and newNodes
@@ -181,13 +181,13 @@ chrome.tabs.onUpdated.addListener( async (tabId, changeInfo, tab) => {
 			console.log("URL is a ChatGPT conversation page:", url);
 
 			// search the new_node_stor for an element with an empty branch_id and return the element index
-			const index = new_node_stor.findIndex((node) => !node.node_branch_id);
+			const index = new_nodes_stor.findIndex((node) => !node.node_branch_id);
 
 			if (index) {
-				new_node_stor[index].branch_id = chat_id;
-				console.log("Updated newNode:", new_node_stor[index].branch_id);
+				new_nodes_stor[index].branch_id = chat_id;
+				console.log("Updated newNode:", new_nodes_stor[index].branch_id);
 
-				let response = await setToStorage({ new_node: new_node_stor });
+				let response = await setToStorage({ new_nodes: new_nodes_stor });
 				console.log("Node branch ID updated to storage:", response);
 			} else {
 				// No newNode with an empty branch_id found
@@ -195,9 +195,9 @@ chrome.tabs.onUpdated.addListener( async (tabId, changeInfo, tab) => {
 			}
 		} else {
 			// We have navigated to a new page or chat; remove the newNode element with an empty branch_id from storage
-			const updated_new_node_stor = new_node_stor.filter((node) => node.node_branch_id); // Remove the newNode with an empty branch_id (check if truthy)
+			const updated_new_nodes_stor = new_nodes_stor.filter((node) => node.node_branch_id); // Remove the newNode with an empty branch_id (check if truthy)
 
-			let response = await setToStorage({ new_node: updated_new_node_stor });
+			let response = await setToStorage({ new_nodes: updated_new_nodes_stor });
 			console.log("New Node branch removed from storage", response);
 		}
 	}
