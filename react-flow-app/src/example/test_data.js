@@ -1,8 +1,4 @@
-{
-	"state": {
-		"new_node": false
-	},
-	
+const testData = {
 	"new_nodes": [
 		{
 			"node_parent_id": "1",
@@ -41,3 +37,4 @@
 		}
 	]
 }
+export default testData;
