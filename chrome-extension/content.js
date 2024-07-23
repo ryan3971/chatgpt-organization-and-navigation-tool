@@ -1,11 +1,6 @@
-let highlightedText = "";
-let highlightedWithinMain = false;
+document.addEventListener("mouseup", handleMouseUp);
 
-// Example content script functionality
-console.log("Content script loaded");
-
-// Listen for mouseup events to detect highlighted text
-document.addEventListener("mouseup", () => {
+function handleMouseUp() {
 	const selection = window.getSelection();
 	const highlightedText = selection.toString();
 	const sourceElement = selection.anchorNode?.parentElement;
@@ -28,10 +23,16 @@ document.addEventListener("mouseup", () => {
 		action: "updateContextMenu",
 		enabled: false,
 	});
-});
+}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-	if (request.action === "extractTitle") {
-		sendResponse({ title: document.title });
+	try {
+		if (request.action === "extractTitle") {
+			sendResponse({ title: document.title });
+		} else {
+			console.error("Unknown action:", request.action);
+		}
+	} catch (error) {
+		console.error("Error in message listener:", error);
 	}
 });
