@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
 	ReactFlow,
@@ -16,10 +17,14 @@ import dagre from "dagre";
 import "@xyflow/react/dist/style.css";
 
 import customNode from "./components/CustomNode/CustomNode";
-import { loadFlowData, saveFlowData, getAdditionalNodeProperties, updateNodeProperties, updateEdgeProperties } from "./backend/chromeStorage";
+import { getFromStorage, setToStorage } from "./backend/chromeStorage";
 
 import ContextMenu from "./components/ContextMenu/ContextMenu";
 import "./components/CustomNode/CustomNode.css";
+
+import { createNewNodes, createNewParentNode } from "./util/createNewNodes.js";
+
+import testData from "./example/test_data.js";
 
 // Graph layout configuration
 const dagreGraph = new dagre.graphlib.Graph();
@@ -27,30 +32,45 @@ dagreGraph.setDefaultEdgeLabel(() => ({}));
 const nodeWidth = 172;
 const nodeHeight = 36;
 
-// Initial node and edge data
-const initialNodes = [
-	{
-		id: "1",
-		type: "customNode",
-		data: { label: "Node 1" },
-		position: { x: 250, y: 0 },
-	},
-];
+//Initial node and edge data
+// const initialNodes = [
+// 	{
+// 		id: "1",
+// 		type: "customNode",
+// 		data: { label: "Node 1" },
+// 		position: { x: 250, y: 0 },
+// 	},
+// ];
 
-// we define the nodeTypes outside of the component to prevent re-renderings
-const initialEdges = [];
+// //we define the nodeTypes outside of the component to prevent re-renderings
+// const initialEdges = [];
 const nodeTypes = { customNode: customNode };
 let nodeId = 2;
 
-// Helper function to layout elements
-const getLayoutedElements = (nodes, edges, direction = "TB") => {
-	console.log("Layouting elements with direction:", direction);
+// Styling for the button and container
+const buttonStyle = {
+	marginLeft: "10px",
+};
 
-	// we create a new dagre graph with the direction
+const containerStyle = {
+	width: "100vw",
+	height: "100vh",
+};
+
+/**
+ * Layouts the nodes and edges in the specified direction using the dagre library.
+ * 
+ * @param {Array} nodes - The array of nodes.
+ * @param {Array} edges - The array of edges.
+ * @param {string} direction - The direction of the layout. Can be "TB" (top to bottom) or "LR" (left to right).
+ * @returns {Object} - The layouted nodes and edges.
+ */
+const getLayoutedElements = (nodes, edges, direction = "TB") => {
+	console.log("Layouting elements with direction: ", direction);
+
 	const isHorizontal = direction === "LR";
 	dagreGraph.setGraph({ rankdir: direction });
 
-	// we need to pass a copy of the nodes to dagre.
 	nodes.forEach((node) => {
 		const { width, height } = node.data.dimensions || { width: nodeWidth, height: nodeHeight };
 		dagreGraph.setNode(node.id, { width, height });
@@ -65,67 +85,117 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	// we need to update the nodes with the calculated positions
 	const newNodes = nodes.map((node) => {
 		const nodeWithPosition = dagreGraph.node(node.id);
-		const newNode = {
+		return {
 			...node,
 			targetPosition: isHorizontal ? "left" : "top",
 			sourcePosition: isHorizontal ? "right" : "bottom",
-			// We are shifting the dagre node position (anchor=center center) to the top left
-			// so it matches the React Flow node anchor point (top left).
 			position: {
 				x: nodeWithPosition.x - (node.data.dimensions?.width || nodeWidth) / 2,
 				y: nodeWithPosition.y - (node.data.dimensions?.height || nodeHeight) / 2,
 			},
 		};
-
-		return newNode;
 	});
 
 	return { nodes: newNodes, edges };
 };
 
 // Layout the initial nodes and edges
-const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
+//const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
 
+/**
+ * Represents the Flow component.
+ * 
+ * @component
+ * @param {Object} props - The component props.
+ * @param {Function} props.togglePanel - The function to toggle the panel.
+ * @returns {JSX.Element} - The rendered Flow component.
+ */
 const Flow = ({ togglePanel }) => {
 	/*
         node (node object):                      { id: string, type: string, position: { x: number, y: number }, data: { label: string } }
         edge (edge object):                      { id: string, source: string, target: string }
         selectedNode (node object):              { id: string, type: string, position: { x: number, y: number }, data: { label: string } }
-        nodeProperties (node properties object): { [nodeId: string]: { additional: { [key: string]: any } } }
-        edgeProperties (edge properties object): { [edgeId: string]: { additional: { [key: string]: any } } }
-        selectedNodeAdditionalProperties:        { [key: string]: any }
         contextMenu (dict):                      { x: number, y: number }
     */
 
-	const [nodes, setNodes] = useNodesState(layoutedNodes);
-	const [edges, setEdges] = useEdgesState(layoutedEdges);
+	const [nodes, setNodes] = useNodesState();//layoutedNodes);
+	const [edges, setEdges] = useEdgesState();//layoutedEdges);
 	const [selectedNode, setSelectedNode] = useState(null);
-
-	const [nodeProperties, setNodeProperties] = useState({});
-	const [edgeProperties, setEdgeProperties] = useState({});
-	const [selectedNodeAdditionalProperties, setSelectedNodeAdditionalProperties] = useState(null);
-
 	const [contextMenu, setContextMenu] = useState(null);
-
 	const contextMenuRef = useRef(null);
 	const isDragging = useRef(false);
 
-	// The useEffect hook is used to load the flow data from the Chrome storage when the component mounts. It sets the nodes and edges arrays, as well as the nodeProperties and edgeProperties objects.
 	useEffect(() => {
-		console.log("Loading flow data");
-		loadFlowData()
-			.then((data) => {
-				if (data) {
-					setNodes(data.nodes || []);
-					setEdges(data.edges || []);
-					setNodeProperties(data.properties.nodes || {});
-					setEdgeProperties(data.properties.edges || {});
+		console.log("Entered useEffect for handling loading data from storage");
+		const fetchData = async () => {
+			let response = null;
+			let stor, nodesStor, edgesStor, newNodesStor, newParentNodeStor;
+			let saveToStorageState = false;
+
+			try {
+				stor = await getFromStorage(["nodes", "edges", "new_nodes", "new_parent_node"]);
+
+				nodesStor = stor["nodes"] || [];
+				edgesStor = stor["edges"] || [];
+				newNodesStor = stor["new_nodes"] || [];
+				newParentNodeStor = stor["new_parent_node"] || [];
+				console.log("In UseEffect, loaded data from storage", stor);
+			} catch (error) {
+				console.error("Error loading data from storage:", error);
+			}
+
+
+			if (nodesStor && edgesStor) {
+				setNodes(nodesStor);
+				setEdges(edgesStor);
+				console.log("In UseEffect, loaded nodes and edges");
+			}
+			
+			if (newParentNodeStor) {
+				// Create new parent node
+				const newParentNodeData = createNewParentNode(newParentNodeStor);
+
+				// merge the new parent node with the existing nodes
+				setNodes((nds) => nds.concat(newParentNodeData));
+
+				// remove the new parent node from the chrome storage
+				try {
+					response = await setToStorage({ new_parent_node: null });
+					console.log("Parent changed to React Node and set to null in storage");
+				} catch (error) {
+					console.error("Error removing new parent node from storage:", error);
 				}
-			})
-			.catch((error) => {
-				console.error(error);
-			});
-	}, [setNodes, setEdges]);
+
+				// add the new parent node to the nodesStor
+				nodesStor = nodesStor.concat(newParentNodeData);
+
+				saveToStorageState = true;
+				console.log("In UseEffect, loaded Parent Node: ", newParentNodeData);
+			}
+
+			if (newNodesStor) {
+				// Create new nodes and edges
+				const newData = createNewNodes(nodesStor, newNodesStor);
+				const newNodesData = newData.map(({ newNode }) => newNode);
+				const newEdgesData = newData.map(({ newEdge }) => newEdge);
+
+				// merge the new nodes and edges with the existing nodes and edges
+				setNodes((nds) => nds.concat(newNodesData));
+				setEdges((eds) => eds.concat(newEdgesData));
+
+				// remove the new nodes from the chrome storage
+				try {
+					response = await setToStorage({ new_nodes: null });
+					console.log("Branch Node(s) changed to React Node(s) and set to null in storage");
+				} catch (error) {
+					console.error("Error removing new nodes from storage:", error);
+				}
+				saveToStorageState = true;
+				console.log("In UseEffect, loaded Branch Node(s): ", newNodesData);
+			}
+		};
+		fetchData();
+	}, []);
 
 	// The hideContextMenu function is called to hide the context menu when the user clicks outside of it.
 	useEffect(() => {
@@ -139,38 +209,42 @@ const Flow = ({ togglePanel }) => {
 		return () => {
 			document.removeEventListener("mousedown", handleClickOutside);
 		};
-	}, []);
+	}, [contextMenuRef]);
 
+	
 	// The addNode function is called when the Add Node button is clicked. It creates a new node and edge and adds them to the nodes and edges arrays.
-	const addNode = useCallback(() => {
-		if (!selectedNode) return;
+	// const addNode = useCallback(() => {
+	// 	if (!selectedNode) return;
 
-		// Create a new node
-		const newNode = {
-			id: `${nodeId++}`,
-			type: "customNode",
-			data: { label: `Node ${nodeId}` },
-			position: { x: selectedNode.position.x + 100, y: selectedNode.position.y + 100 },
-		};
+	// 	// Create a new node
+	// 	const newNode = {
+	// 		id: `${nodeId++}`,
+	// 		type: "customNode",
+	// 		data: { label: `Node ${nodeId}` },
+	// 		position: { x: selectedNode.position.x + 100, y: selectedNode.position.y + 100 },
+	// 	};
 
-		// Create a new edge
-		const newEdge = {
-			id: `e${selectedNode.id}-${newNode.id}`,
-			source: selectedNode.id,
-			target: newNode.id,
-		};
+	// 	// Create a new edge
+	// 	const newEdge = {
+	// 		id: `e${selectedNode.id}-${newNode.id}`,
+	// 		source: selectedNode.id,
+	// 		target: newNode.id,
+	// 	};
 
-		// Add the new node and edge to the nodes and edges arrays
-		setNodes((nds) => nds.concat(newNode));
-		setEdges((eds) => eds.concat(newEdge));
-	}, [setNodes, setEdges, selectedNode]);
+	// 	// Add the new node and edge to the nodes and edges arrays
+	// 	setNodes((nds) => nds.concat(newNode));
+	// 	setEdges((eds) => eds.concat(newEdge));
+	// }, [setNodes, setEdges, selectedNode]);
 
 	// The onConnect function is called when a connection is created between two nodes. It adds the new edge to the edges array and saves the flow data to the Chrome storage.
 	const onConnect = (connection) => {
 		console.log("onConnect", connection);
 		setEdges((eds) => {
 			const updatedEdges = addEdge(connection, eds);
-			saveFlowData(nodes, updatedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			setToStorage({ nodes: nodes, edges: updatedEdges }).then((response) => {
+				console.log("onConnect called, saved updated Edges (and nodes) to storage");
+			});
+
 			return updatedEdges;
 		});
 	};
@@ -199,9 +273,11 @@ const Flow = ({ togglePanel }) => {
 		setNodes((nds) => {
 			const updatedNodes = applyNodeChanges(changes, nds);
 			if (!isDragging.current) {
-				saveFlowData(updatedNodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
-			}
+				setToStorage({ nodes: updatedNodes, edges: edges }).then((response) => {
+					console.log("onNodesChange called, saved Updated Node data to Storage");
+				});
 			return updatedNodes;
+			}
 		});
 	};
 
@@ -210,7 +286,9 @@ const Flow = ({ togglePanel }) => {
 		console.log("onEdgesChange: ", changes);
 		setEdges((eds) => {
 			const updatedEdges = applyEdgeChanges(changes, eds);
-			saveFlowData(nodes, updatedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
+			setToStorage({ nodes: nodes, edges: updatedEdges }).then((response) => {
+				console.log("onEdgesChange called, saved updated Edges (and nodes) to storage", response);
+			});
 			return updatedEdges;
 		});
 	};
@@ -223,7 +301,6 @@ const Flow = ({ togglePanel }) => {
 	const onNodeDragStop = () => {
 		console.log("onNodeDragStop");
 		isDragging.current = false;
-		saveFlowData(nodes, edges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
 	};
 
 	// The onLayout function is called when the vertical or horizontal layout buttons are clicked. It layouts the nodes and edges in the specified direction.
@@ -233,8 +310,6 @@ const Flow = ({ togglePanel }) => {
 
 			setNodes([...layoutedNodes]);
 			setEdges([...layoutedEdges]);
-			// Save the layouted nodes and edges to the Chrome storage
-			//saveFlowData(layoutedNodes, layoutedEdges, { nodes: nodeProperties, edges: edgeProperties }).catch(console.error);
 		},
 		[nodes, edges]
 	);
@@ -246,7 +321,6 @@ const Flow = ({ togglePanel }) => {
 			setSelectedNode(null);
 		} else {
 			setSelectedNode(nodes[0]);
-			// 	getAdditionalNodeProperties(nodes[0].id).then(setSelectedNodeAdditionalProperties);
 		}
 		console.log("onChange - selectedNode: ", selectedNode);
 	});
@@ -284,45 +358,12 @@ const Flow = ({ togglePanel }) => {
 	const onNodeClick = useCallback((event, node) => {
 		console.log("onNodeClick: ", node);
 		setSelectedNode(node);
-		getAdditionalNodeProperties(node.id)
-			.then((additionalProperties) => {
-				setSelectedNodeAdditionalProperties(additionalProperties);
-			})
-			.catch((error) => {
-				console.error(error);
-			});
 	}, []);
-
-	// The applyNodeChanges function is used to apply the changes to the nodes array. It takes the changes and the nodes array as input and returns the updated nodes array.
-	const handleUpdateNodeProperty = (id, property) => {
-		console.log("handleUpdateNodeProperty: ", id, property);
-		updateNodeProperties(id, property)
-			.then(() => {
-				setNodeProperties((props) => ({
-					...props,
-					[id]: { ...props[id], additional: { ...props[id].additional, ...property } },
-				}));
-			})
-			.catch(console.error);
-	};
-
-	// The applyEdgeChanges function is used to apply the changes to the edges array. It takes the changes and the edges array as input and returns the updated edges array.
-	const handleUpdateEdgeProperty = (id, property) => {
-		console.log("handleUpdateEdgeProperty: ", id, property);
-		updateEdgeProperties(id, property)
-			.then(() => {
-				setEdgeProperties((props) => ({
-					...props,
-					[id]: { ...props[id], additional: { ...props[id].additional, ...property } },
-				}));
-			})
-			.catch(console.error);
-	};
 
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.
 	return (
-		<div style={{ width: "100vw", height: "100vh" }}>
-			<button onClick={togglePanel} style={{ marginLeft: "10px" }}>
+		<div style={containerStyle}>
+			<button onClick={togglePanel} style={buttonStyle}>
 				Toggle Side Panel
 			</button>
 			<ReactFlow
@@ -338,9 +379,9 @@ const Flow = ({ togglePanel }) => {
 				onNodeDragStop={onNodeDragStop}
 			>
 				<Panel position="top-right">
-					<button onClick={addNode} disabled={!selectedNode}>
+					{/* <button onClick={addNode} disabled={!selectedNode}>
 						Add Node
-					</button>
+					</button> */}
 					<button onClick={() => onLayout("TB")}>vertical layout</button>
 					<button onClick={() => onLayout("LR")}>horizontal layout</button>
 				</Panel>
@@ -349,14 +390,6 @@ const Flow = ({ togglePanel }) => {
 				<MiniMap />
 				<Background variant="dots" gap={12} size={1} />
 			</ReactFlow>
-			{selectedNode && selectedNodeAdditionalProperties && (
-				<div>
-					<h3>Additional Properties for {selectedNode.data.label}</h3>
-					<pre>{JSON.stringify(selectedNodeAdditionalProperties, null, 2)}</pre>
-					{/* UI to update properties */}
-					<button onClick={() => handleUpdateNodeProperty(selectedNode.id, { customProperty: "newValue" })}>Update Property</button>
-				</div>
-			)}
 		</div>
 	);
 };
