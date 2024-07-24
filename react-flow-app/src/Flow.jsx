@@ -17,7 +17,7 @@ import dagre from "dagre";
 import "@xyflow/react/dist/style.css";
 
 import customNode from "./components/CustomNode/CustomNode";
-import { getFromStorage, setToStorage } from "./backend/chromeStorage";
+import { getFromStorage, setToStorage, sendMessage } from "./backend/chromeStorage";
 
 import ContextMenu from "./components/ContextMenu/ContextMenu";
 import "./components/CustomNode/CustomNode.css";
@@ -360,6 +360,22 @@ const Flow = ({ togglePanel }) => {
 		setSelectedNode(node);
 	}, []);
 
+	const refreshDiagram = useCallback(async () => {
+		console.log("refreshDiagram");
+		let response = null;
+		try {
+			response = await sendMessage({ action: "updateDiagram" });
+			console.log("Refreshed diagram Response: ", response);
+		} catch (error) {
+			console.error(error);
+		}
+		// Send a message to chrome background service (probably should do this through chromeStorage.js)
+
+		// Receive an array containing the ids of chats and their titles
+
+		// Got through nodes and update their data.label property (set the flag for changing to true;)
+	}, []);
+
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.
 	return (
 		<div style={containerStyle}>
@@ -382,6 +398,7 @@ const Flow = ({ togglePanel }) => {
 					{/* <button onClick={addNode} disabled={!selectedNode}>
 						Add Node
 					</button> */}
+					<button onClick={() => refreshDiagram()}>Refresh</button>
 					<button onClick={() => onLayout("TB")}>vertical layout</button>
 					<button onClick={() => onLayout("LR")}>horizontal layout</button>
 				</Panel>

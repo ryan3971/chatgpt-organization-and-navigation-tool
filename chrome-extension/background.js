@@ -27,6 +27,7 @@ const CHATGPT_HOSTNAME = "chatgpt.com";
 // Variable used for state management
 let state = {
 	hasNewNode: false,
+	lastActiveChatId: null,
 };
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -146,10 +147,19 @@ async function handleContextMenuClick(info, tab) {
 chrome.tabs.onUpdated.addListener(handleTabUpdate);
 
 async function handleTabUpdate(tabId, changeInfo, tab) {
+	// Check if the tab has hostname CHATGPT_HOSTNAME. If it does, save the tab info so we can manipulate it later
+	const url = new URL(tab.url);
+	const hostname = url.hostname; // e.g., chatgpt.com
+
+	if (hostname === CHATGPT_HOSTNAME) {
+		state.lastActiveChatId = tab.id;
+		console.log("Last active ChatGPT tab ID Saved:", state.lastActiveChatId);
+	}
+
 	if (changeInfo.url && state.hasNewNode) {
 		const url = new URL(changeInfo.url);
 
-		const hostname = url.hostname; // e.g., https://chatgpt.com
+		const hostname = url.hostname; // e.g., chatgpt.com
 		const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
 
 		// check if hostname is chatgpt and chat_id is empty
@@ -209,28 +219,90 @@ function handleChromeActionClick() {
 		focused: true,
 	});
 }
+// function isTabExist(tabId) {
+// 	return new Promise((resolve, reject) => {
+// 		chrome.tabs.get(tabId, (tab) => {
+// 			if (chrome.runtime.lastError) {
+// 				return reject(new Error(chrome.runtime.lastError.message));
+// 			}
+// 			resolve(tab);
+// 		});
+// 	});
+// }
 
+// async function executeScript(tabId, func) {
 
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-	try	{
-		if (message.action === "updateContextMenu") {
-			chrome.contextMenus.update("saveHighlightedText", {
-				enabled: message.enabled,
+// 			// (results) => {
+// 			// 	if (chrome.runtime.lastError) {
+// 			// 		return reject(new Error(chrome.runtime.lastError.message));
+// 			// 	}
+// 			// 	resolve(results);
+// 			// }
+// }
+
+function getPanelData() {
+	// wrap this in a promise
+	console.log("getPanelData executed");
+	return document.documentElement.outerHTML;
+}
+
+/*
+Note: Keeping .catch for each promise to make debugging easier.
+	  Might change it from throwing an error to just a warning
+*/
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+	if (message.action === "updateContextMenu") {
+		chrome.contextMenus.update("saveHighlightedText", {enabled: message.enabled,})
+			.then(() => {
+				sendResponse({ success: true });
+			}).catch((error) => {
+				console.error("Error updating context menu: ", error);
+				sendResponse({ success: false });
 			});
-		} else if (message.action === "getFromStorage") {
-			const result = await chrome.storage.sync.get(message.key);
-			console.log("Data retrieved from storage: ", result[message.key]);
-			sendResponse({ data: result[message.key] });
-		} else if (message.action === "setToStorage") {
-			const data = { [message.key]: message.value };
-			console.log("Data saved to storage: ", data);
-			await chrome.storage.sync.set(data);
+
+	} else if (message.action === "updateDiagram")	{
+		chrome.tabs.get(state.lastActiveChatId)
+			.then((tab) => {
+				if (!tab) {
+					console.error("Error getting tab: ", chrome.runtime.lastError.message);
+				}
+				console.log("Last active chat tab found");
+
+				const response = sendMessageToTab(tab.id, { action: "getPanelData" })
+				return response;
+			})
+			.then((response) => {
+				if (!response) {
+					console.error("Error getting panel data: ", chrome.runtime.lastError.message);
+				}
+				console.log("Response from getPanelData: ", response);
+				sendResponse({ success: true, html: response });
+			})
+			.catch((error) => {
+				console.error("Error updating diagram: ", error);
+				sendResponse({ success: false });
+			});
+	} else if (message.action === "getFromStorage") {
+		chrome.storage.sync.get(message.key)
+			.then((result) => {
+				console.log("Data retrieved from storage: ", result[message.key]);
+				sendResponse({ success: true, data: result[message.key] });
+			}).catch((error) => {
+				console.error("Error getting from storage: ", error);
+				sendResponse({ success: false });
+		});
+	} else if (message.action === "setToStorage") {
+		const data = { [message.key]: message.value };
+		console.log("Data saved to storage: ", data);
+		chrome.storage.sync.set(data)
+		.then(() => {
 			sendResponse({ success: true });
-		} else {
-			console.error("Unknown storage action: ", message.action);
-		}
-	} catch (error)	{
-		console.error("Error in chrome.storage:", error);
+		}).catch((error) => {
+			console.error("Error setting to storage: ", error);
+			sendResponse({ success: false });
+		});
+	} else {
+		console.error("Unknown storage action: ", message.action);
 		sendResponse({ success: false });
 	}
 

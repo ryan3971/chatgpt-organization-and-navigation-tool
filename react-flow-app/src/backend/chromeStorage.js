@@ -1,33 +1,33 @@
-/**
- * Retrieves data from chrome.storage.sync.
- * @param {string|string[]|object} keys - A single key, an array of keys, or an object specifying default values to retrieve.
- * @returns {Promise<object>} - A promise that resolves to an object containing the retrieved data.
- */
-export async function getFromStorage(keys) {
-	return new Promise((resolve, reject) => {
-		chrome.storage.sync.get(keys, (result) => {
-			if (chrome.runtime.lastError) {
-				reject(`Error getting from storage: ${chrome.runtime.lastError.message}`);
-			} else {
-				resolve(result);
-			}
-		});
-	});
+export async function sendMessage(action) {
+	try	{
+		const response = await chrome.runtime.sendMessage(action);
+		console.log("Response from background script in sendMessage: ", response);
+		return response;
+	} catch (error) {
+		console.error("Error sending message in sendMessage:", error);
+		return null;
+	}
 }
 
-/**
- * Stores data in chrome.storage.sync.
- * @param {object} items - An object containing key-value pairs to store.
- * @returns {Promise<void>} - A promise that resolves when the data is successfully stored.
- */
+export async function getFromStorage(keys) {
+	try	{
+		const response = chrome.storage.sync.get(keys);
+		console.log("Response from background script in getFromStorage: ", response);
+		return response;
+	}
+	catch (error) {
+		console.error("Error getting from storage in getFromStorage:", error);
+		return null;
+	}
+}
+
 export async function setToStorage(items) {
-	return new Promise((resolve, reject) => {
-		chrome.storage.sync.set(items, () => {
-			if (chrome.runtime.lastError) {
-				reject(`Error setting to storage: ${chrome.runtime.lastError.message}`);
-			} else {
-				resolve("Data saved to storage");
-			}
-		});
-	});
+	try {
+		const response = await chrome.storage.sync.set(items);
+		console.log("Response from background script in setToStorage: ", response);
+		return response;
+	} catch (error) {
+		console.error("Error getting from storage in setToStorage", error);
+		return null;
+	}
 }

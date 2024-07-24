@@ -29,10 +29,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	try {
 		if (request.action === "extractTitle") {
 			sendResponse({ title: document.title });
+		} else if (request.action === "getPanelData") {
+			sendResponse({ title: document.title });
 		} else {
 			console.error("Unknown action:", request.action);
 		}
 	} catch (error) {
 		console.error("Error in message listener:", error);
 	}
+	return true;
 });
