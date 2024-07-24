@@ -28,6 +28,7 @@ const CHATGPT_HOSTNAME = "chatgpt.com";
 let state = {
 	hasNewNode: false,
 	lastActiveChatId: null,
+	overviewWindowId: null,
 };
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -206,9 +207,18 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 	}
 }
 
-chrome.action.onClicked.addListener(handleChromeActionClick);
+chrome.action.onClicked.addListener(openOverviewWindow);
 
-function handleChromeActionClick() {
+chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
+
+function openOverviewWindow() {
+
+	// Check if the window already exists
+	if (state.overviewWindowId) {
+		chrome.windows.update(state.overviewWindowId, { focused: true });
+		return;
+	}
+
 	console.log("Action button clicked. Opening window.");
 
 	chrome.windows.create({
@@ -218,32 +228,14 @@ function handleChromeActionClick() {
 		height: 600,
 		focused: true,
 	});
+	state.overviewWindowId = window.id;
 }
-// function isTabExist(tabId) {
-// 	return new Promise((resolve, reject) => {
-// 		chrome.tabs.get(tabId, (tab) => {
-// 			if (chrome.runtime.lastError) {
-// 				return reject(new Error(chrome.runtime.lastError.message));
-// 			}
-// 			resolve(tab);
-// 		});
-// 	});
-// }
 
-// async function executeScript(tabId, func) {
-
-// 			// (results) => {
-// 			// 	if (chrome.runtime.lastError) {
-// 			// 		return reject(new Error(chrome.runtime.lastError.message));
-// 			// 	}
-// 			// 	resolve(results);
-// 			// }
-// }
-
-function getPanelData() {
-	// wrap this in a promise
-	console.log("getPanelData executed");
-	return document.documentElement.outerHTML;
+function handleOverviewWindowClose(windowId) {
+	if (windowId === state.overviewWindowId) {
+		state.overviewWindowId = null;
+		console.log("Overview window was closed.");
+	}
 }
 
 /*
@@ -276,7 +268,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 					console.error("Error getting panel data: ", chrome.runtime.lastError.message);
 				}
 				console.log("Response from getPanelData: ", response);
-				sendResponse({ success: true, html: response });
+				sendResponse({ success: true });
 			})
 			.catch((error) => {
 				console.error("Error updating diagram: ", error);

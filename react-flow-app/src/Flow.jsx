@@ -13,7 +13,7 @@ import {
 	applyNodeChanges,
 	applyEdgeChanges,
 } from "@xyflow/react";
-import dagre from "dagre";
+import dagre, { layout } from "dagre";
 import "@xyflow/react/dist/style.css";
 
 import customNode from "./components/CustomNode/CustomNode";
@@ -33,19 +33,19 @@ const nodeWidth = 172;
 const nodeHeight = 36;
 
 //Initial node and edge data
-// const initialNodes = [
-// 	{
-// 		id: "1",
-// 		type: "customNode",
-// 		data: { label: "Node 1" },
-// 		position: { x: 250, y: 0 },
-// 	},
-// ];
+const initialNodes = [
+	{
+		id: "1",
+		type: "customNode",
+		data: { label: "Node 1" },
+		position: { x: 250, y: 0 },
+	},
+];
 
 // //we define the nodeTypes outside of the component to prevent re-renderings
-// const initialEdges = [];
+const initialEdges = [];
 const nodeTypes = { customNode: customNode };
-let nodeId = 2;
+//let nodeId = 2;
 
 // Styling for the button and container
 const buttonStyle = {
@@ -99,9 +99,14 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	return { nodes: newNodes, edges };
 };
 
-// Layout the initial nodes and edges
-//const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
-
+const TESTING_REACT = true;
+let layoutedNodes = null;
+let layoutedEdges = null;
+if (TESTING_REACT)	{
+	const initialLayout = getLayoutedElements(initialNodes, initialEdges);
+	layoutedNodes = initialLayout.nodes;
+	layoutedEdges = initialLayout.edges;
+}
 /**
  * Represents the Flow component.
  * 
@@ -118,8 +123,8 @@ const Flow = ({ togglePanel }) => {
         contextMenu (dict):                      { x: number, y: number }
     */
 
-	const [nodes, setNodes] = useNodesState();//layoutedNodes);
-	const [edges, setEdges] = useEdgesState();//layoutedEdges);
+	const [nodes, setNodes] = useNodesState(layoutedNodes);
+	const [edges, setEdges] = useEdgesState(layoutedEdges);
 	const [selectedNode, setSelectedNode] = useState(null);
 	const [contextMenu, setContextMenu] = useState(null);
 	const contextMenuRef = useRef(null);
@@ -135,10 +140,10 @@ const Flow = ({ togglePanel }) => {
 			try {
 				stor = await getFromStorage(["nodes", "edges", "new_nodes", "new_parent_node"]);
 
-				nodesStor = stor["nodes"] || [];
-				edgesStor = stor["edges"] || [];
-				newNodesStor = stor["new_nodes"] || [];
-				newParentNodeStor = stor["new_parent_node"] || [];
+				nodesStor = stor["nodes"];
+				edgesStor = stor["edges"];
+				newNodesStor = stor["new_nodes"];
+				newParentNodeStor = stor["new_parent_node"];
 				console.log("In UseEffect, loaded data from storage", stor);
 			} catch (error) {
 				console.error("Error loading data from storage:", error);
@@ -156,8 +161,11 @@ const Flow = ({ togglePanel }) => {
 				const newParentNodeData = createNewParentNode(newParentNodeStor);
 
 				// merge the new parent node with the existing nodes
-				setNodes((nds) => nds.concat(newParentNodeData));
-
+				if (!nodesStor) {
+					setNodes([newParentNodeData]);
+				} else	{
+					setNodes((nds) => nds.concat(newParentNodeData));
+				}
 				// remove the new parent node from the chrome storage
 				try {
 					response = await setToStorage({ new_parent_node: null });
@@ -276,10 +284,10 @@ const Flow = ({ togglePanel }) => {
 				setToStorage({ nodes: updatedNodes, edges: edges }).then((response) => {
 					console.log("onNodesChange called, saved Updated Node data to Storage");
 				});
-			return updatedNodes;
 			}
-		});
-	};
+			return updatedNodes;
+			});
+		};
 
 	// The applyEdgeChanges function is used to apply the changes to the edges array. It takes the changes and the edges array as input and returns the updated edges array.
 	const onEdgesChange = (changes) => {
@@ -301,6 +309,11 @@ const Flow = ({ togglePanel }) => {
 	const onNodeDragStop = () => {
 		console.log("onNodeDragStop");
 		isDragging.current = false;
+
+		// Called here because onNodeChange is not called when dragging stops
+		setToStorage({ nodes: nodes, edges: edges }).then((response) => {
+			console.log("Dragging stopped, saved Updated Node data to Storage");
+		});
 	};
 
 	// The onLayout function is called when the vertical or horizontal layout buttons are clicked. It layouts the nodes and edges in the specified direction.
@@ -369,11 +382,13 @@ const Flow = ({ togglePanel }) => {
 		} catch (error) {
 			console.error(error);
 		}
-		// Send a message to chrome background service (probably should do this through chromeStorage.js)
 
-		// Receive an array containing the ids of chats and their titles
-
-		// Got through nodes and update their data.label property (set the flag for changing to true;)
+		// Reload the nodes and edges from storage
+		const stor = await getFromStorage(["nodes", "edges"]);
+		const nodesStor = stor["nodes"] || [];
+		const edgesStor = stor["edges"] || [];
+		setNodes(nodesStor);
+		setEdges(edgesStor);
 	}, []);
 
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.

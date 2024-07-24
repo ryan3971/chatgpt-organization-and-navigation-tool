@@ -25,12 +25,46 @@ function handleMouseUp() {
 	});
 }
 
+async function searchChatTitlesInSidePanel() {
+	
+	// check if any href elements exists that at least contain the /c/ path
+
+	const ishrefs = document.querySelectorAll('a[href*="/c/"]');
+
+	if (!ishrefs) {
+		console.log("No hrefs found. Side Panel is likely not open.");
+		return false;
+	}
+	
+	const {nodes : nodesStor} = await chrome.storage.sync.get("nodes");
+
+	// for each node id, query the document for an href that matches the format href="id"
+
+	for (let i = 0; i < nodesStor.length; i++)	{
+		const node = nodesStor[i];
+		const id = node.id;
+		const href = document.querySelector(`a[href="${id}"]`);
+		if (href) {
+			console.log("Found href for node:", href);
+			const chatTitle = href.innerText;
+			if (chatTitle) {
+				console.log("Chat title:", chatTitle);
+				nodesStor[i].data.label = chatTitle;
+			}
+		}
+	}
+
+	await chrome.storage.sync.set({nodes : nodesStor});
+	return true
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	try {
 		if (request.action === "extractTitle") {
 			sendResponse({ title: document.title });
 		} else if (request.action === "getPanelData") {
-			sendResponse({ title: document.title });
+			const response = searchChatTitlesInSidePanel();
+			sendResponse({ response: response });
 		} else {
 			console.error("Unknown action:", request.action);
 		}
