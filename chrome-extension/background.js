@@ -21,6 +21,7 @@ import { sendMessageToTab, setToStorage, getFromStorage } from "./chromeStorage.
 // 	},
 // ];
 
+const CHATGPT_ORIGIN = "https://chatgpt.com"
 const CHATGPT_HOSTNAME = "chatgpt.com";
 
 
@@ -84,7 +85,7 @@ async function saveHighlightedText(info, tab) {
 	const selectedText = info.selectionText;
 	const url = new URL(info.pageUrl);
 
-	//const hostname = url.hostname; // e.g., https://chatgpt.com
+	//const hostname = url.hostname; // e.g., chatgpt.com
 	const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
 
 	try {
@@ -207,6 +208,11 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 	}
 }
 
+
+// Function to message the react application, if the window is open
+
+
+
 chrome.action.onClicked.addListener(openOverviewWindow);
 
 chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
@@ -227,8 +233,9 @@ function openOverviewWindow() {
 		width: 800,
 		height: 600,
 		focused: true,
+	}, function(window) {
+  		state.overviewWindowId = window.id;
 	});
-	state.overviewWindowId = window.id;
 }
 
 function handleOverviewWindowClose(windowId) {
@@ -274,6 +281,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 				console.error("Error updating diagram: ", error);
 				sendResponse({ success: false });
 			});
+	} else if (message.action === "openChat") 		{
+		const chatId = message.nodeId;
+		const chatUrl = `${CHATGPT_ORIGIN}${chatId}`
+		// Launch in the last active chatGPT tab or create a new tab
+		if (state.lastActiveChatId) {
+			chrome.tabs.update(state.lastActiveChatId, { url: chatUrl });
+		} else {
+			chrome.tabs.create({ url: chatUrl });
+		}
+		sendResponse({ success: true });
+
 	} else if (message.action === "getFromStorage") {
 		chrome.storage.sync.get(message.key)
 			.then((result) => {

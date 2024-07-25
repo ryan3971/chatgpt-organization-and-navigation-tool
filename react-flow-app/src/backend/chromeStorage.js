@@ -11,7 +11,7 @@ export async function sendMessage(action) {
 
 export async function getFromStorage(keys) {
 	try	{
-		const response = chrome.storage.sync.get(keys);
+		const response = await chrome.storage.sync.get(keys);
 		console.log("Response from background script in getFromStorage: ", response);
 		return response;
 	}

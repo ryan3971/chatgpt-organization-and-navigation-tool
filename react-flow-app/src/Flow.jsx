@@ -99,9 +99,9 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 	return { nodes: newNodes, edges };
 };
 
-const TESTING_REACT = true;
-let layoutedNodes = null;
-let layoutedEdges = null;
+const TESTING_REACT = false;
+let layoutedNodes = [];
+let layoutedEdges = [];
 if (TESTING_REACT)	{
 	const initialLayout = getLayoutedElements(initialNodes, initialEdges);
 	layoutedNodes = initialLayout.nodes;
@@ -163,8 +163,10 @@ const Flow = ({ togglePanel }) => {
 				// merge the new parent node with the existing nodes
 				if (!nodesStor) {
 					setNodes([newParentNodeData]);
+					nodesStor = [newParentNodeData];
 				} else	{
 					setNodes((nds) => nds.concat(newParentNodeData));
+					nodesStor = nodesStor.concat(newParentNodeData);
 				}
 				// remove the new parent node from the chrome storage
 				try {
@@ -173,9 +175,6 @@ const Flow = ({ togglePanel }) => {
 				} catch (error) {
 					console.error("Error removing new parent node from storage:", error);
 				}
-
-				// add the new parent node to the nodesStor
-				nodesStor = nodesStor.concat(newParentNodeData);
 
 				saveToStorageState = true;
 				console.log("In UseEffect, loaded Parent Node: ", newParentNodeData);
@@ -366,6 +365,26 @@ const Flow = ({ togglePanel }) => {
 		}
 	};
 
+	const openChat = () => {
+		console.log("openChat: ", selectedNode);
+		if (selectedNode) {
+			setContextMenu(null);	// I think this calls onNodeChange
+
+			// Get the node id and pass it to the content script
+			const nodeId = selectedNode.id;
+			console.log("openChat - Node ID: ", nodeId);
+
+			// setToStorage({ nodes: nodes, edges: edges }).then((response) => {
+			// 	console.log("onNodesChange called, saved Updated Node data to Storage");
+			// });
+
+			sendMessage({ action: "openChat", nodeId: nodeId }).then((response) => {
+				console.log("openChat called, opened new Chat");
+			});
+			//    setSelectedNode(null);
+		}
+	};
+
 	// The onNodeClick function is called when a node is clicked. It sets the selected node and retrieves the additional properties for the node from the Chrome storage.
 	// Need this since useOnSelectionChange not called when node is clicked
 	const onNodeClick = useCallback((event, node) => {
@@ -417,7 +436,7 @@ const Flow = ({ togglePanel }) => {
 					<button onClick={() => onLayout("TB")}>vertical layout</button>
 					<button onClick={() => onLayout("LR")}>horizontal layout</button>
 				</Panel>
-				{contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onDelete={deleteNode} />}
+				{contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} onDelete={deleteNode} openChat={openChat} />}
 				<Controls />
 				<MiniMap />
 				<Background variant="dots" gap={12} size={1} />

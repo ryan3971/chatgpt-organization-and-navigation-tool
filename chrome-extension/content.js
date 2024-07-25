@@ -67,9 +67,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			sendResponse({ response: response });
 		} else {
 			console.error("Unknown action:", request.action);
+			sendResponse({ response: false });
 		}
 	} catch (error) {
 		console.error("Error in message listener:", error);
+		sendResponse({ response: false });
 	}
 	return true;
 });
