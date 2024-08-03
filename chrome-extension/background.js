@@ -1,4 +1,5 @@
-import { sendMessageToTab, setToStorage, getFromStorage } from "./chromeStorage.js";
+import { getFromStorage, setToStorage } from "./shared/services/chromeStorageService.js";
+import { sendMessageToTab } from "./shared/services/communicationService.js";
 
 /* CONSTANT DEFINITIONS */
 // const TEST_NEW_NODE = [
@@ -49,13 +50,14 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 async function createParentNode(info, tab) {
+	console.log("Setting Parent Node")
+	
 	let titleText = "",
 		response;
 	const url = new URL(info.pageUrl);
 
 	//const hostname = url.hostname; // e.g., https://chatgpt.com
 	const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-	console.log("Pathname: ", chatId);
 
 	if (chatId === "/") {
 		console.warn("URL is a new chat. Cannot make parent yet: ", url);
@@ -81,6 +83,8 @@ async function createParentNode(info, tab) {
 }
 
 async function saveHighlightedText(info, tab) {
+	console.log("Saving Highlighted Text");
+	
 	let titleText = "", response;
 	const selectedText = info.selectionText;
 	const url = new URL(info.pageUrl);
@@ -112,7 +116,7 @@ async function saveHighlightedText(info, tab) {
 
 	// Retrieve the newNodes from storage
 	const { new_nodes: newNodesStor } = await getFromStorage("new_nodes");
-	console.log("Data retrieved from storage:", newNodesStor);
+	console.log("Data retrieved from storage (this may be empty, that is fine):", newNodesStor);
 
 	const updatedNewNodesStor = newNodesStor ? [...newNodesStor, new_node] : [new_node];
 
@@ -134,7 +138,7 @@ async function saveHighlightedText(info, tab) {
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 
 async function handleContextMenuClick(info, tab) {
-	console.log("Context menu item clicked:", info, tab);
+	console.log("Chrome context menu item clicked");
 
 	if (info.menuItemId === "createParentNode") {
 		chrome.storage.sync.clear();

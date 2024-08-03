@@ -17,7 +17,8 @@ import dagre, { layout } from "dagre";
 import "@xyflow/react/dist/style.css";
 
 import customNode from "./components/CustomNode/CustomNode";
-import { getFromStorage, setToStorage, sendMessage } from "./backend/chromeStorage";
+import { getFromStorage, setToStorage } from "../../chrome-extension/shared/services/chromeStorageService.js";
+import { sendMessage } from "../../chrome-extension/shared/services/communicationService.js";
 
 import ContextMenu from "./components/ContextMenu/ContextMenu";
 import "./components/CustomNode/CustomNode.css";
