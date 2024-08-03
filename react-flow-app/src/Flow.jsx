@@ -43,7 +43,7 @@ const initialNodes = [
 	},
 ];
 
-// //we define the nodeTypes outside of the component to prevent re-renderings
+//we define the nodeTypes outside of the component to prevent re-renderings
 const initialEdges = [];
 const nodeTypes = { customNode: customNode };
 //let nodeId = 2;
