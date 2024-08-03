@@ -63,8 +63,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		if (request.action === "extractTitle") {
 			sendResponse({ title: document.title });
 		} else if (request.action === "getPanelData") {
-			const response = searchChatTitlesInSidePanel();
-			sendResponse({ response: response });
+			searchChatTitlesInSidePanel().then((response) => {;
+				sendResponse({ response: response });
+			});
 		} else {
 			console.error("Unknown action:", request.action);
 			sendResponse({ response: false });
