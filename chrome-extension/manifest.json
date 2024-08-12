@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "Your Extension Name",
 	"version": "1.0",
-	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus", "webNavigation"],
+	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus", "webNavigation", "notifications"],
 	"background": {
 		"service_worker": "background.js",
 		"type": "module"
@@ -18,10 +18,8 @@
 
 	"web_accessible_resources": [
 		{
-			"resources": [
-				"assets/*"
-			],
-			"matches": ["<all_urls>"]
+			"resources": ["assets/*"],
+			"matches": ["https://chatgpt.com/*"]
 		}
 	]
 }

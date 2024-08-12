@@ -1,0 +1,33 @@
+.node-table {
+  position: absolute;
+  top: 25%;
+  left: 0;
+  width: 100%;
+  height: 75%;
+  display: flex;
+  flex-direction: column;
+}
+
+.node-table-row {
+  display: flex;
+  flex: 1;
+}
+
+.node-table-column {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  border-radius: 10px;
+  margin: 5px;
+}
+
+.light-blue {
+  background-color: lightblue;
+}
+
+.light-gray {
+  background-color: lightgray;
+}

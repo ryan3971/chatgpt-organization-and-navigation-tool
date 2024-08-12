@@ -1,0 +1,61 @@
+{
+	"node_spaces": [
+		{
+			"id": "1",
+			"node_parent_id": "..."
+		}
+	],
+	
+	
+	
+	"nodes_1": [
+		{
+			"id": "node_ID",
+			"type": "...",
+			"position": {
+				"x": 250,
+				"y": 5
+			},
+			"data": {
+				"label": "Chat Title"
+			}
+		}
+	],
+
+	"nodes_properties_1": [
+		{
+			"id": "node_ID",
+			"isDeleted": "false",
+			"parentNodeId": "",
+			"branchNodesIds": ["", "", ""]
+		}
+	],
+
+	"nodes_messages_1": [
+		{
+			"id": "node_ID",
+			"messages": [
+				{
+					"userMessage": "...",
+					"gptMessage": "..."
+				}
+			]
+		}
+	],
+
+	"edges_1": [
+		{
+			"id": "1->2",
+			"source": "1",
+			"target": "2"
+		}
+	],
+
+	"edges_properties_1": [
+		{
+			"id": "1->2",
+			"selectedText": "...",
+			"selectedTextContainerId": "..."
+		}
+	]
+}
