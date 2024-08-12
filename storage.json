@@ -6,8 +6,6 @@
 		}
 	],
 	
-	
-	
 	"nodes_1": [
 		{
 			"id": "node_ID",
@@ -17,29 +15,23 @@
 				"y": 5
 			},
 			"data": {
-				"label": "Chat Title"
+				"label": "Chat Title",
+				"isDeleted": "false",
+				"parentNodeId": "",
+				"messages": [
+					{
+						"userMessage": "...",
+						"gptMessage": "..."
+					}
+				],
+				"branch": [
+     				{
+						"branch_id": "...",
+						"selectedText": "...",
+						"selectedTextContainerId": "..."
+					}
+				]
 			}
-		}
-	],
-
-	"nodes_properties_1": [
-		{
-			"id": "node_ID",
-			"isDeleted": "false",
-			"parentNodeId": "",
-			"branchNodesIds": ["", "", ""]
-		}
-	],
-
-	"nodes_messages_1": [
-		{
-			"id": "node_ID",
-			"messages": [
-				{
-					"userMessage": "...",
-					"gptMessage": "..."
-				}
-			]
 		}
 	],
 
@@ -47,15 +39,13 @@
 		{
 			"id": "1->2",
 			"source": "1",
-			"target": "2"
-		}
-	],
-
-	"edges_properties_1": [
-		{
-			"id": "1->2",
-			"selectedText": "...",
-			"selectedTextContainerId": "..."
+			"target": "2",
+			"data":	[
+				{
+					"selectedText": "...",
+					"selectedTextContainerId": "..."
+				}
+			]
 		}
 	]
 }
