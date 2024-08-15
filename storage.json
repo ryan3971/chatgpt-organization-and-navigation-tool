@@ -1,11 +1,32 @@
 {
+	"node_space_1": {
+		"node_id": {
+			"title": "Chat Title",
+			"isParent": true,
+			"messages": [
+				{
+					"userMessage": "...",
+					"gptMessage": "..."
+				}
+			],
+			"branches": {
+				"branch_id_1": {
+					"selectedText": "...",
+					"selectedTextContainerId": "..."
+				}
+			}
+		}
+	},
+
+	
+
 	"node_spaces": [
 		{
 			"id": "1",
 			"node_parent_id": "..."
 		}
 	],
-	
+
 	"nodes_1": [
 		{
 			"id": "node_ID",
@@ -25,7 +46,7 @@
 					}
 				],
 				"branch": [
-     				{
+					{
 						"branch_id": "...",
 						"selectedText": "...",
 						"selectedTextContainerId": "..."
@@ -40,7 +61,7 @@
 			"id": "1->2",
 			"source": "1",
 			"target": "2",
-			"data":	[
+			"data": [
 				{
 					"selectedText": "...",
 					"selectedTextContainerId": "..."
