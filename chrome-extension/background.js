@@ -1,9 +1,10 @@
 import {
 	doesChatExist,
-	createNewNodeSpace,
 	createNewNodeParent,
 	updateNodeMessages,
 	createNewNodeBranch,
+	updateNodeTitle,
+	deleteNode,
 } from "./background_helpers/helper_functions.js";
 import * as Constants from "./Constants/constants.js";
 
@@ -158,15 +159,8 @@ async function createParentNode(info, tab) {
 	response = await sendMessage(tab.id, Constants.GET_CHAT_TITLE);
 	const chat_title = response.data || "ChatGPT Title";
 
-	// Create a new node space
-	const node_space = await createNewNodeSpace(chat_id);
-	if (!node_space) {
-		notifyUser(Constants.ERROR, "Error creating new node space");
-		return;
-	}
-
 	// Create new node
-	const node = await createNewNodeParent(node_space.id, chat_id, chat_title);
+	const node_space_id = await createNewNodeParent(chat_id, chat_title);
 	if (!node) {
 		notifyUser(Constants.ERROR, "Error creating new node");
 		return;
@@ -174,8 +168,8 @@ async function createParentNode(info, tab) {
 
 	// Send the chat data back to the content script
 	chat_data.chat_type = Constants.CHAT_TYPE_EXISTING_CHAT;
-	chat_data.node_space_id = node_space.id;
-	chat_data.node_id = node.id;
+	chat_data.node_space_id = node_space_id;
+	chat_data.node_id = chat_id;
 
 	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, chat_data);
 	if (!response.status) {
@@ -307,6 +301,35 @@ async function updateChatMessages(chat_data, chatMessages) {
 	return true;
 }
 
+async function updateChatTitle(data) {
+	var response;
+	const node_id = data.node_id;
+	const new_title = data.new_title;
+
+	response = await updateNodeTitle(node_id, new_title);
+
+	if (!response) {
+		notifyUser(Constants.ERROR, "Error updating node title");
+		return false;
+	}
+	return true;
+}
+
+async function deleteChat(data) {
+	var response;
+	const node_id = data.node_id;
+
+	response = await deleteNode(node_id);
+
+	if (!response) {
+		notifyUser(Constants.ERROR, "Error deleting node");
+		return false;
+	}
+	return true;
+}
+
+
+
 // Send in format {action: ..., data: ...}
 // Receive in format {status: ..., data: ...}
 async function sendMessage(tabId, message_key, message_data=null) {
@@ -353,6 +376,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 				sendResponse(response);
 			});
 			break;
+
+		case Constants.HANDLE_CHAT_RENAMING:
+			console.log("Received message to update node title");
+			updateChatTitle(data).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
+
+		case Constants.HANDLE_CHAT_DELETION:
+			console.log("Received message to delete node");
+			deleteChat(data).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
+
 		default:
 			console.error("Unknown action:", message.action);
 			sendResponse(response);

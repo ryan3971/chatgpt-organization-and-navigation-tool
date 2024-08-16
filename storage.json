@@ -1,4 +1,9 @@
 {
+	"node_spaces_keys": [
+		"node_space_1",
+		"node_space_2"
+	],
+	
 	"node_space_1": {
 		"node_id": {
 			"title": "Chat Title",
@@ -18,7 +23,24 @@
 		}
 	},
 
-	
+	"node_space_2": {
+		"node_id": {
+			"title": "Chat Title",
+			"isParent": true,
+			"messages": [
+				{
+					"userMessage": "...",
+					"gptMessage": "..."
+				}
+			],
+			"branches": {
+				"branch_id_1": {
+					"selectedText": "...",
+					"selectedTextContainerId": "..."
+				}
+			}
+		}
+	},
 
 	"node_spaces": [
 		{

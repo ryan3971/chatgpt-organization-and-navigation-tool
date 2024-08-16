@@ -25,24 +25,24 @@ let sendButtonFound = false;
 let stopButtonFound = false;
 let navElementFound = false;
 
-// Function to check and handle the presence of elements of interest
-const checkAndHandleElements = function (observer) {
+let deleteDialogFound = false;	//Used to detect when a chat is being deleted
+let inputFieldFound = false;	//Used to detect when a chat title is being edited
 
+let navPanelIds = [];
+let renamedChatData = {};
+
+//let navPanelFirstOpened = false;
+
+// Function to check and handle the presence of elements of interest
+function checkAndHandleElements(observer, mutation) {
+	console.log("Mutation detected:");
 	if (!Constants) return; // Wait for the constants to be loaded
 
-	const sendButton = document.querySelector('[data-testid="send-button"]');
+	// Interested in the send button and the navigational panel
 	const stopButton = document.querySelector('[data-testid="stop-button"]');
-	const navElement = document.querySelector("nav[class]");
+	const navPanel = document.querySelector("nav[class]");
 
-	if (sendButton && !sendButtonFound) {
-		// Fires when the end button appears (not necessarily when a message is sent)
-		console.log("Send button appeared in the DOM.");
-		sendButtonFound = true;
-	} else if (!sendButton && sendButtonFound) {
-		console.log("Send button disappeared from the DOM.");
-		sendButtonFound = false;
-	}
-
+	// Use this to "detect" new messages in the chat
 	if (stopButton && !stopButtonFound) {
 		console.log("Stop button appeared in the DOM.");
 		stopButtonFound = true;
@@ -63,20 +63,80 @@ const checkAndHandleElements = function (observer) {
 		}
 	}
 
-	if (navElement && !navElementFound) {
-		console.log("Nav element appeared in the DOM.");
-		navElementFound = true;
-	} else if (!navElement && navElementFound) {
-		console.log("Nav element disappeared from the DOM.");
-		navElementFound = false;
+	if (navPanel)	{
+		const deleteDialog = document.querySelector('div[role="dialog"]');
+		const inputField = document.querySelector('input[type="text"]');
+
+		//console.log("Mutation in nav panel detected", mutation.target);
+
+		if (deleteDialog && !deleteDialogFound) {
+			console.log('Delete dialog appeared in the DOM');
+			deleteDialogFound = true;
+			const navPanelElements = navPanel.querySelectorAll('a[href*="/c/"]');
+			navPanelIds = getIDfromHref(navPanelElements);	// store the chat ids from the nav panel into an array
+
+		}
+		if (inputField && !inputFieldFound) {
+			console.log("Input field appeared in the DOM");
+			inputFieldFound = true;
+
+			const parentElement = inputField.closest("li");
+			const chatHref = parentElement.querySelector("a").getAttribute("href");
+			const chatTitle = parentElement.innerText;
+			renamedChatData = { chatHref, chatTitle };
+		}
+
+		if (navPanel.contains(mutation.target))	{
+			if (mutation.target.matches('ol')) {
+				console.log("Nav panel list has changed - check if a delete or rename occurred");
+
+				if (!inputField && inputFieldFound) {
+					console.log("Input field is not in the DOM...and it was there before");
+					inputFieldFound = false;
+
+					const chatHref = renamedChatData.chatHref;
+					const navPanelElement = navPanel.querySelector(`a[href*="${chatHref}"]`);
+					const chatTitle = navPanelElement.innerText;
+
+					if (chatTitle !== renamedChatData.chatTitle) {
+						console.log("Chat title changed:", chatTitle);
+						const chatId = getIDfromHref([navPanelElement])[0];
+
+						// send the chat id and new chat title to the background script
+						sendMessage(Constants.HANDLE_CHAT_RENAMING, { chat_id: chatId, chat_title: chatTitle });
+					}
+				}
+
+				if (!deleteDialog && deleteDialogFound) {
+					console.log("Delete dialog disappeared from the DOM...and it was there before");
+					deleteDialogFound = false;
+
+					// query nav panel for all chat elements, het the ids for them
+					const navPanelElements = navPanel.querySelectorAll('a[href*="/c/"]');
+					const updatedNavPanelHrefs = getIDfromHref(navPanelElements);
+
+					// compare the two arrays to find the deleted chat id
+					const deletedChatId = navPanelIds.find((id) => !updatedNavPanelHrefs.includes(id));
+
+					if (deletedChatId) {
+						console.log("Chat deleted:", deletedChatId);
+						//sendMessage(Constants.HANDLE_CHAT_DELETION, { chat_id: deletedChatId });
+					} else {
+						console.log("No chat was deleted");
+					}
+					navPanelIds = []; // reset the array
+				}
+			}
+		}
+
 	}
 };
-
 // Callback function to execute when mutations are observed
 const callback = function (mutationsList, observer) {
 	for (const mutation of mutationsList) {
+		// only interested in childList mutations (i.e., new nodes added or removed)
 		if (mutation.type === "childList") {
-			checkAndHandleElements(observer);
+			checkAndHandleElements(observer, mutation);
 		}
 	}
 };
@@ -93,6 +153,19 @@ observer.observe(targetNode, config);
 /************** End Mutation Observer Section **************/
 
 /************** General Functions **************/
+
+function getIDfromHref(elements) {
+
+	const navPanelIds = [];
+	elements.forEach((element) => {
+		const href = element.getAttribute("href");
+		const url = new URL(href);
+		const chatId = url.pathname;
+		navPanelIds.push(chatId);
+	});
+
+	return navPanelIds;
+}
 
 async function createNewBranchChat() {
 	console.log("Message sent in new branch chat");
@@ -202,6 +275,7 @@ async function getSelectedText() {
 
 			// get just the number from the data-testid by splitting it on conversation-turn-
 			const selectedTextContainerId = dataTestId.split("conversation-turn-")[1];
+			selectedTextContainerId = (selectedTextContainerId - 2) % 2 // divide by two to account for the messages being paired, minus 2 becuase the conversation turn starts at 2
 
 			// return the selected text and the data-testid value
 			response.flag = Constants.VALID_TEXT_SELECTION;

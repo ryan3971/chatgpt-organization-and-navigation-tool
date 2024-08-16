@@ -10,7 +10,7 @@ export const CHATGPT_HOSTNAME = "chatgpt.com";
 
 /***** Storage Keys *****/
 
-export const NODE_SPACES_KEY = "node_spaces";
+export const NODE_SPACES_KEY = "node_spaces_keys";
 export const NODES_KEY = "nodes";
 export const NODES_PROPERTIES_KEY = "nodes_properties";
 export const NODES_MESSAGES_KEY = "nodes_messages";
@@ -27,6 +27,10 @@ export const CONTENT_SCRIPT_CONSTANTS = "content_script_constants";
 export const UPDATE_CONTENT_SCRIPT_TEMP_DATA = "update_content_script_temp_data";
 export const HANDLE_NEW_BRANCH_CREATION = "handle_new_branch_creation";
 export const UPDATE_CHAT_MESSAGES = "update_chat_messages";
+
+export const HANDLE_CHAT_RENAMING = "handle_chat_renaming";
+export const HANDLE_CHAT_DELETION = "handle_chat_deletion";
+
 export const GET_CHAT_TITLE = "get_chat_title";
 export const GET_CHAT_DATA = "get_chat_data";
 export const GET_SELECTED_TEXT = "get_selected_text";
