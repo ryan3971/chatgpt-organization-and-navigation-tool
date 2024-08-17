@@ -3,7 +3,7 @@ import * as Constants from "../Constants/constants.js";
 
 /****** General Functions ******/
 
-export async function doesChatExist(chat_id)    {
+export async function doesNodeExist(node_id)    {
 	// First, get from storage the node spaces
 	const node_spaces_keys = await getFromStorage(Constants.NODE_SPACES_KEY);
 	if (!node_spaces_keys) return false; // false if node_spaces is undefined or false
@@ -19,10 +19,10 @@ export async function doesChatExist(chat_id)    {
         }
 
         // Check if the key exists in the nodes
-        if (chat_id in nodes) {
+        if (node_id in nodes) {
             return {
                 node_space_id: node_space_key,
-                node_id: chat_id,
+                node_id: node_id,
             };
         }
 	}
@@ -30,7 +30,7 @@ export async function doesChatExist(chat_id)    {
 }
 
 /***** Create New Storage Objects *****/
-export async function createNewNodeSpace(node_id) {
+export async function createNewNodeSpace() {
     const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
 
     if (nodeSpacesKeys === false) {
@@ -58,7 +58,7 @@ export async function createNewNodeSpace(node_id) {
 export async function createNewNodeParent(node_id, node_title) {
     
     // Create a new node space
-    const nodeSpaceId = await createNewNodeSpace(node_id);
+    const nodeSpaceId = await createNewNodeSpace();
     if (!nodeSpaceId) {
         console.error("Node space not created");
         return false;
@@ -144,13 +144,15 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
     node.messages = messages;
 
     // get the length of the messages dict
-    const messagesLength = Object.keys(messages).length;
-    // iterate through the branches and check if the selected text container is greather than the length of the messages
+    var messagesLength = Object.keys(messages).length;
+    messagesLength = messagesLength - 1; // subtract 1 because a new node user and generated messages is created in place of the old ones
+    // iterate through the branches and check if the selected text container is greater than the length of the messages
     for (const branch_id in node.branches) {
-        selectedTextContainerId = node.branches[branch_id].selectedTextContainerId; // divide by 2 because each message dict contains two messages
+        const selectedTextContainerId = node.branches[branch_id].selectedTextContainerId; // divide by 2 because each message dict contains two messages
         if (selectedTextContainerId > messagesLength) {
             // set the selected text container id to be null
             node.branches[branch_id].selectedTextContainerId = null;
+            console.log("Selected text container id is greater than the length of the messages. Setting it to null");
 		}
     }
 
@@ -164,11 +166,12 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
     return true;
 }
 
-export async function updateNodeTitle(node_id, new_title) {
+export async function updateNodeTitle(nodeId, newTitle) {
     
     const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
 
-    if (nodeSpacesKeys === false) {
+    if (!nodeSpacesKeys) {
+        console.error("Node spaces not found in storage");
         return false;
     }
     
@@ -180,54 +183,78 @@ export async function updateNodeTitle(node_id, new_title) {
             continue;
         }
 
-        if (node_id in nodes) {
-            // update the node with the new title
-            nodes[node_id].title = new_title;
-            const savedNodes = await setToStorage(nodeSpaceKey, nodes);
+        if (nodeId in nodes) {
+			// update the node with the new title
+			nodes[nodeId].title = newTitle;
+			const savedNodes = await setToStorage(nodeSpaceKey, nodes);
 
-            if (!savedNodes) {
-                console.error("Nodes title not saved to storage");
-                return false;
-            }
-            return true;
-        }
+			if (!savedNodes) {
+				console.error("Nodes title not saved to storage");
+				return false;
+			}
+			console.log("Node title updated in storage");
+			return true;
+		}
     }
 
     console.log("Node not found in storage. Likely was not a stored node");
     return true;    // might change
 }
 
-export async function deleteNode(node_id) {
- 
-    const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+export async function deleteNode(node_id, nodes=null, level=0) {
+    
+    // we need to get the nodes from storage, check if the node is in the nodes, and recursively delete all branches of the node (and the branches of those nodes too) if it is found
+    var nodeSpaceKey;
+    
+    if (nodes === null) {
+        const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+        if (!nodeSpacesKeys) {
+            console.error("Node spaces not found in storage");
+            return false;
+        }
+        
+        for (nodeSpaceKey of nodeSpacesKeys) {
+            nodes = await getFromStorage(nodeSpaceKey);
 
-    if (nodeSpacesKeys === false) {
+            if (!nodes) {
+                console.error("Nodes not found in storage. This should not happen.");
+                continue;
+            }
+
+            if (node_id in nodes) {
+                break;
+            }
+        }
+    }
+
+    if (node_id in nodes) {
+		// recursively delete the branches of the node
+        const nodeBranchesIds = Object.keys(nodes[node_id].branches);
+		for (const branch_id of nodeBranchesIds) {
+			deleteNode(branch_id, nodes, level + 1);
+            console.log("Branch deleted");
+		}
+		// delete the node
+		delete nodes[node_id];
+        console.log("Node deleted");
+
+	} else if (level === 0) {
+        console.error("Node not found in storage. Node likely was not a stored node");
+        return true;
+    } else if (level > 0) {
+        console.error("Node not found in storage. This should not happen.");
         return false;
     }
 
-    for (const nodeSpaceKey of nodeSpacesKeys) {
-        const nodes = await getFromStorage(nodeSpaceKey);
-
-        if (!nodes) {
-            console.error("Nodes not found in storage. This should not happen.");
-            continue;
-        }
-
-        if (node_id in nodes) {
-            delete nodes[node_id];
-            const savedNodes = await setToStorage(nodeSpaceKey, nodes);
-
-            if (!savedNodes) {
-                console.error("Nodes not saved to storage");
-                return false;
-            }
-            return true;
+    // save the new nodes to storage
+    if (level === 0) {
+        const savedNodes = await setToStorage(nodeSpaceKey, nodes);
+        if (!savedNodes) {
+            console.error("Nodes not saved to storage");
+            return false;
         }
     }
-
-    console.log("Node not found in storage. Likely was not a stored node");
-    return true;    // might change
-    
+    return true;
 }
 
 /***** General Helper Function ******/

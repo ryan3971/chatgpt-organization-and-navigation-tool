@@ -1,5 +1,5 @@
 import {
-	doesChatExist,
+	doesNodeExist,
 	createNewNodeParent,
 	updateNodeMessages,
 	createNewNodeBranch,
@@ -30,8 +30,10 @@ let branchParentData = {
 
 chrome.tabs.onUpdated.addListener(handleTabUpdate);
 async function handleTabUpdate(tabId, changeInfo, tab) {
-	
-	if (changeInfo.status !== 'complete') return;	// Wait for the page to load completely
+	console.log("Tab updated:", tab.status);
+	if (changeInfo.status !== "complete") return; // Wait for the page to load completely
+	console.log("Tab fully loaded");
+
 	var response;
 	// New webpage open, is it ChatGPT?
 	const url = new URL(tab.url);
@@ -42,49 +44,66 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 	//state.lastActiveChatId = tab.id;
 	//console.log("Last active ChatGPT tab ID Saved:", state.lastActiveChatId);
 
-	// Check the Chat URL
-	const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-	var message;
-	var message = {
-		chat_type: null,
-		node_space_id: null,
-		node_id: null,
-		selected_text_data: null,
-	};
-
-	if (chatId === "/") {
-		if (state.isNewBranchNode) {	// New branch chat
-			console.log("New branch chat");
-			state.isNewBranchNode = false;
-			message.chat_type = Constants.CHAT_TYPE_NEW_BRANCH_CHAT;
-			message.node_space_id = branchParentData.node_space_id;
-			message.node_id = branchParentData.parent_node_id;
-			message.selected_text_data = branchParentData.selected_text_data;
-			branchParentData = {}; // Reset the branch parent data
-		}else {	// New chat
-			console.log("New chat");
-			message.chat_type = Constants.CHAT_TYPE_NEW_CHAT;
-		}
-	} else { // Existing chat
-		response = await doesChatExist(chatId);
-		if (!response) {	// Chat does not exist
-			console.warn("Chat does not exist");
-			message.chat_type = Constants.CHAT_TYPE_UNKNOWN_CHAT;
-		} else {	// Chat exists
-			console.log("Value of response: ", response);
-			console.log("Chat exists");
-			message.chat_type = Constants.CHAT_TYPE_EXISTING_CHAT;
-			const {node_space_id, node_id} = response;
-			message.node_space_id = node_space_id;
-			message.node_id = node_id;
-		}
-	}
-
 	// We need to send the Constants to the content script
 	response = await sendMessage(tab.id, Constants.CONTENT_SCRIPT_CONSTANTS, Constants);
 	if (!response.status) {
 		console.error("Error sending constants to content script");
 		return;
+	}
+
+	// Check the Node URL
+	const nodeId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
+	var message;
+	var message = {
+		node_type: null,
+		node_space_id: null,
+		node_id: null,
+		selected_text_data: null,
+	};
+
+	if (nodeId === "/") {
+		if (state.isNewBranchNode) {
+			// New branch node
+			console.warn("New branch node");
+			state.isNewBranchNode = false;
+			message.node_type = Constants.NODE_TYPE_NEW_BRANCH;
+			message.node_space_id = branchParentData.node_space_id;
+			message.node_id = branchParentData.parent_node_id;
+			message.selected_text_data = branchParentData.selected_text_data;
+			branchParentData = {}; // Reset the branch parent data
+		} else {
+			// New node
+			console.warn("New node");
+			message.node_type = Constants.NODE_TYPE_NEW;
+		}
+	} else {
+		// We need to check if this update was caused by a new branch chat first
+		// send a message to the content script to check if the chat is a new branch chat
+		// response = await sendMessage(tab.id, Constants.IS_BRANCH_BEING_CREATED);
+		// if (!response.status) {
+		// 	console.error("Error asking content script if branch is being made");
+		// 	return;
+		// }
+		// if (response.data) {
+		// 	// Branch is being created
+		// 	console.warn("Branch is being created...stop running onUpdate in background");
+		// 	return;
+		// }
+
+		// Existing node
+		response = await doesNodeExist(nodeId);
+		if (!response) {
+			// Node does not exist
+			console.warn("Node does not exist");
+			message.node_type = Constants.NODE_TYPE_UNKNOWN;
+		} else {
+			// Node exists
+			console.warn("Node exists");
+			message.node_type = Constants.NODE_TYPE_EXISTING;
+			const { node_space_id, node_id } = response;
+			message.node_space_id = node_space_id;
+			message.node_id = node_id;
+		}
 	}
 
 	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, message);
@@ -98,13 +117,13 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 chrome.runtime.onInstalled.addListener(() => {
 	chrome.contextMenus.create({
 		id: Constants.CONTEXT_MENU_CREATE_BRANCH_NODE,
-		title: "Create Branch Chat",
+		title: "Create Branch Node",
 		contexts: ["selection"], // makes it so the button only appears when text is selected
 		enabled: true,
 	});
 	chrome.contextMenus.create({
 		id: Constants.CONTEXT_MENU_CREATE_PARENT_NODE,
-		title: "Make Parent Chat",
+		title: "Make Parent Node",
 		contexts: ["all"],
 	});
 	chrome.contextMenus.create({
@@ -134,46 +153,46 @@ function handleContextMenuClick(info, tab) {
 async function createParentNode(info, tab) {
 	console.log("Setting Parent Node");
 
-	var chat_data = {};
+	var node_data = {};
 	var response;
 
-	// Get the chat information from the content script
-	response = await sendMessage(tab.id, Constants.GET_CHAT_DATA);
+	// Get the node information from the content script
+	response = await sendMessage(tab.id, Constants.GET_NODE_DATA);
 	if (!response.status) {
 		notifyUser(Constants.ERROR, "Error getting chat data");
 		return;
 	}
-	chat_data = response.data;
-	const chat_type = chat_data.chat_type;
+	node_data = response.data;
+	const node_type = node_data.node_type;
 
-	// is this chat a branch?
-	if (chat_type !== Constants.CHAT_TYPE_UNKNOWN_CHAT) {
-		notifyUser(Constants.WARNING, "Chat is not a new chat. Cannot make into parent");
+	// is this node a branch?
+	if (node_type !== Constants.NODE_TYPE_UNKNOWN) {
+		notifyUser(Constants.WARNING, "Node is not a new chat. Cannot make into parent");
 		return;
 	}
 
-	// Get the chat id and chat title
+	// Get the node id and node title
 	const url = new URL(info.pageUrl);
-	const chat_id = url.pathname;
+	const node_id = url.pathname;
 
-	response = await sendMessage(tab.id, Constants.GET_CHAT_TITLE);
-	const chat_title = response.data || "ChatGPT Title";
+	response = await sendMessage(tab.id, Constants.GET_NODE_TITLE);
+	const node_title = response.data;
 
 	// Create new node
-	const node_space_id = await createNewNodeParent(chat_id, chat_title);
-	if (!node) {
+	const node_space_id = await createNewNodeParent(node_id, node_title);
+	if (!node_space_id) {
 		notifyUser(Constants.ERROR, "Error creating new node");
 		return;
 	}
 
-	// Send the chat data back to the content script
-	chat_data.chat_type = Constants.CHAT_TYPE_EXISTING_CHAT;
-	chat_data.node_space_id = node_space_id;
-	chat_data.node_id = chat_id;
+	// Send the node data back to the content script
+	node_data.node_type = Constants.NODE_TYPE_EXISTING;
+	node_data.node_space_id = node_space_id;
+	node_data.node_id = node_id;
 
-	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, chat_data);
+	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, node_data);
 	if (!response.status) {
-		notifyUser(Constants.ERROR, "Error updating the parent chat data");
+		notifyUser(Constants.ERROR, "Error updating the parent node data");
 		return;
 	}
 
@@ -181,22 +200,21 @@ async function createParentNode(info, tab) {
 }
 
 async function startNewBranchChat(info, tab) {
-
 	var response;
-	// Get the chat information from the content script
-	response = await sendMessage(tab.id, Constants.GET_CHAT_DATA);
+	// Get the node information from the content script
+	response = await sendMessage(tab.id, Constants.GET_NODE_DATA);
 	if (!response.status) {
-		notifyUser(Constants.ERROR, "Error getting chat data");
+		notifyUser(Constants.ERROR, "Error getting node data");
 		return;
 	}
-	const chat_data = response.data;
+	const node_data = response.data;
 
-	// Check what type of chat it is
-	if (chat_data.chat_type === Constants.CHAT_TYPE_UNKNOWN_CHAT) {
-		notifyUser(Constants.WARNING, "URL is not a known chat. Cannot create branch from it");
+	// Check what type of node it is
+	if (node_data.node_type === Constants.NODE_TYPE_UNKNOWN) {
+		notifyUser(Constants.WARNING, "URL is not a known node. Cannot create branch from it");
 		return;
-	} else if (chat_data.chat_type === Constants.CHAT_TYPE_NEW_CHAT) {
-		notifyUser(Constants.WARNING, "URL is a new chat. Cannot create branch from it");
+	} else if (node_data.node_type === Constants.NODE_TYPE_NEW) {
+		notifyUser(Constants.WARNING, "URL is a new node. Cannot create branch from it");
 		return;
 	}
 
@@ -226,28 +244,28 @@ async function startNewBranchChat(info, tab) {
 	const { selectedText, selectedTextContainerId } = response.data;
 
 	branchParentData = {
-		node_space_id: chat_data.node_space_id,
-		parent_node_id: chat_data.node_id,
-		selected_text_data: {selectedText, selectedTextContainerId},
+		node_space_id: node_data.node_space_id,
+		parent_node_id: node_data.node_id,
+		selected_text_data: { selectedText, selectedTextContainerId },
 	};
 
 	// Set the state to indicate a new branch node has been created
 	state.isNewBranchNode = true;
 
-	// Open a new ChatGPT chat in the current tab
-	notifyUser(Constants.INFO, "New branch chat started");
+	// Open a new ChatGPT node in the current tab
+	notifyUser(Constants.INFO, "New branch node started");
 	chrome.tabs.update(tab.id, { url: Constants.CHATGPT_ORIGIN });
 }
 
-async function createBranchChat(chat_data, data, tab_id) {
+async function createBranchChat(node_data, data, tab_id) {
 	var response;
 	// Create a new node object and associated objects
-	const node_space_id = chat_data.node_space_id;
-	const parent_node_id = chat_data.node_id;
-	const selected_text_data = chat_data.selected_text_data;
+	const node_space_id = node_data.node_space_id;
+	const parent_node_id = node_data.node_id;
+	const selected_text_data = node_data.selected_text_data;
 
-	const branch_node_id = data.chat_id;
-	const branch_node_title = data.chat_title;
+	const branch_node_id = data.node_id;
+	const branch_node_title = data.node_title;
 
 	response = await createNewNodeBranch(node_space_id, parent_node_id, selected_text_data, branch_node_id, branch_node_title);
 	if (!response) {
@@ -255,47 +273,47 @@ async function createBranchChat(chat_data, data, tab_id) {
 		return false;
 	}
 
-	// Creating a new chat object to send to the content script
-	var new_chat_data = {
-		chat_type: null,
-		node_space_id: null,
-		node_id: null,
-		selected_text_data: null,
-	};
+	// // Creating a new chat object to send to the content script
+	// var new_chat_data = {
+	// 	chat_type: null,
+	// 	node_space_id: null,
+	// 	node_id: null,
+	// 	selected_text_data: null,
+	// };
 
-	// Send the chat data back to the content script
-	new_chat_data.chat_type = Constants.CHAT_TYPE_EXISTING_CHAT;
-	new_chat_data.node_space_id = node_space_id;
-	new_chat_data.node_id = branch_node_id;
+	// // Send the chat data back to the content script
+	// new_chat_data.chat_type = Constants.CHAT_TYPE_EXISTING_CHAT;
+	// new_chat_data.node_space_id = node_space_id;
+	// new_chat_data.node_id = branch_node_id;
 
-	// Send the chat data back to the content script
-	response = await sendMessage(tab_id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, new_chat_data);
-	if (!response.status) {
-		notifyUser(Constants.ERROR, "Error updating the new branch chat data");
-		return;
-	}
+	// // Send the chat data back to the content script
+	// response = await sendMessage(tab_id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, new_chat_data);
+	// if (!response.status) {
+	// 	notifyUser(Constants.ERROR, "Error updating the new branch chat data");
+	// 	return false;
+	// }
 
 	console.log("Branch Node Created");
 
 	return true;
 }
 
-async function updateChatMessages(chat_data, chatMessages) {
+async function updateChatMessages(node_data, node_messages) {
 	
 	var response;
-	const node_space_id = chat_data.node_space_id;
-	const node_id = chat_data.node_id;
-	const chat_type = chat_data.chat_type;
+	const node_space_id = node_data.node_space_id;
+	const node_id = node_data.node_id;
+	const node_type = node_data.node_type;
 
-	if (chat_type === Constants.CHAT_TYPE_EXISTING_CHAT)	{
-		// Update the chat messages
-		response = await updateNodeMessages(node_space_id, node_id, chatMessages);
+	if (node_type === Constants.NODE_TYPE_EXISTING)	{
+		// Update the node messages
+		response = await updateNodeMessages(node_space_id, node_id, node_messages);
 		if (!response) {
-			notifyUser(Constants.ERROR, "Error updating chat messages");
+			notifyUser(Constants.ERROR, "Error updating node messages");
 			return false;
 		}
 	} else {
-		console.error("Unknown chat type:", chat_type);
+		console.error("Unknown node type:", node_type);
 		return false;
 	}
 	return true;
@@ -328,8 +346,6 @@ async function deleteChat(data) {
 	return true;
 }
 
-
-
 // Send in format {action: ..., data: ...}
 // Receive in format {status: ..., data: ...}
 async function sendMessage(tabId, message_key, message_data=null) {
@@ -348,11 +364,11 @@ async function sendMessage(tabId, message_key, message_data=null) {
 	}
 }
 
-// Receive in format {action: ..., chat_data: ..., data: ...}
+// Receive in format {action: ..., node_data: ..., data: ...}
 // Respond in format {status: ..., data: ...}
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	
-	const chat_data = message.chat_data;
+	const node_data = message.node_data;
 	const data = message.data;
 
 	var response = {
@@ -361,9 +377,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	};
 
 	switch (message.action) {
-		case Constants.UPDATE_CHAT_MESSAGES:
-			console.log("Received message to update chat messages");
-			updateChatMessages(chat_data, data).then((status) => {
+		case Constants.UPDATE_NODE_MESSAGES:
+			console.log("Received message to update node messages");
+			updateChatMessages(node_data, data).then((status) => {
 				response.status = status;
 				sendResponse(response);
 			});
@@ -371,26 +387,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		case Constants.HANDLE_NEW_BRANCH_CREATION:
 			console.log("Received message to handle new branch creation");
 			const tab_id = sender.tab.id;
-			createBranchChat(chat_data, data, tab_id).then((status) => {
+			createBranchChat(node_data, data, tab_id).then((status) => {
 				response.status = status;
 				sendResponse(response);
 			});
 			break;
-
-		case Constants.HANDLE_CHAT_RENAMING:
+		case Constants.HANDLE_NODE_RENAMING:
 			console.log("Received message to update node title");
 			updateChatTitle(data).then((status) => {
 				response.status = status;
 				sendResponse(response);
 			});
-
-		case Constants.HANDLE_CHAT_DELETION:
+			break;
+		case Constants.HANDLE_NODE_DELETION:
 			console.log("Received message to delete node");
 			deleteChat(data).then((status) => {
 				response.status = status;
 				sendResponse(response);
 			});
-
+			break;
 		default:
 			console.error("Unknown action:", message.action);
 			sendResponse(response);
