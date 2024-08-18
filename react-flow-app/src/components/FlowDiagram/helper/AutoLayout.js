@@ -1,6 +1,6 @@
 import Dagre from "@dagrejs/dagre";
 
-const getLayoutedElements = (nodes, edges, options) => {
+export const getLayoutedElements = (nodes, edges, options) => {
 	const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 	g.setGraph({ rankdir: options.direction });
 

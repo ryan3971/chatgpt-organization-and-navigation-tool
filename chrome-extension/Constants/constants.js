@@ -63,3 +63,6 @@ export const ERROR = "Error";
 export const INFO = "Info";
 export const SUCCESS = "Success";
 export const WARNING = "Warning";
+
+/****** React Application Messages ******/
+export const REACT_OPEN_CHAT = "open_chat";
