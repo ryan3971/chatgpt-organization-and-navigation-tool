@@ -1,5 +1,4 @@
-import React from "react";
-import { Background, Handle, Position } from "@xyflow/react";
+import { Handle, Position } from "@xyflow/react";
 
 const CustomHandle = ({ branch }) => {
     const selectedTextContainerId = branch.selectedTextContainerId;

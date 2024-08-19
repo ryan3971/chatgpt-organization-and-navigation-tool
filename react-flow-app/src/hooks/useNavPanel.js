@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 export const useNavPanel = (initialState = false) => {
-	const [isPanelOpen, setIsPanelOpen] = useState(false);
+	const [isPanelOpen, setIsPanelOpen] = useState(initialState);
 
     // const handleWorkspaceSelect = (workspaceId) => {
     //     // Logic to load the selected workspace

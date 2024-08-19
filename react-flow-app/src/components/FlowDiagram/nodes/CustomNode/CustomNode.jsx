@@ -1,10 +1,8 @@
-import React from "react";
-import PropTypes from "prop-types";
 import { Handle } from "@xyflow/react";
 import MessageTable from "./MessageTable";
 import CustomHandle from "./CustomHandle";
 import Title from "./NodeTitle";
-import { COLUMN_WIDTH, DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, TABLE_WIDTH, TABLE_HEIGHT } from "../../helper/constants";
+import { COLUMN_WIDTH, DEFAULT_NODE_WIDTH } from "../../../../util/constants";
 
 const CustomNode = ({ id, data }) => {
 	const { title, messages, branches, isParent } = data;

@@ -100,7 +100,7 @@ export async function createNewNodeBranch(node_space_id, parent_node_id, selecte
     // update the parent node with the new branch data
     const branchData = {
 		selectedText: selected_text_data.selectedText,
-		selectedTextContainerId: selected_text_data.selectedTextContainerId,
+		selectedTextContainerId: String(selected_text_data.selectedTextContainerId),    // convert to string
 	};
     parentNode.branches[branch_node_id] = branchData;
     spaceNodes[parent_node_id] = parentNode;
@@ -148,7 +148,9 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
     messagesLength = messagesLength - 1; // subtract 1 because a new node user and generated messages is created in place of the old ones
     // iterate through the branches and check if the selected text container is greater than the length of the messages
     for (const branch_id in node.branches) {
-        const selectedTextContainerId = node.branches[branch_id].selectedTextContainerId; // divide by 2 because each message dict contains two messages
+        let selectedTextContainerId = node.branches[branch_id].selectedTextContainerId;
+        selectedTextContainerId = Number(selectedTextContainerId);  // convert back to number
+
         if (selectedTextContainerId > messagesLength) {
             // set the selected text container id to be null
             node.branches[branch_id].selectedTextContainerId = null;
@@ -256,6 +258,32 @@ export async function deleteNode(node_id, nodes=null, level=0) {
     }
     return true;
 }
+
+/**** Getter Functions ******/
+export async function getNodeSpaces() {
+	const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+	if (nodeSpacesKeys === null) {
+        console.warn("No Node spaces available in storage");
+        return null;
+    } else if (nodeSpacesKeys === false) {
+		console.error("Node spaces not found in storage");
+		return false;
+	}
+	return nodeSpacesKeys;
+}
+
+export async function getNodeSpaceData(node_space_id) {
+    const nodes = await getFromStorage(node_space_id);
+    if (nodes === null) {
+        console.warn("No nodes available in storage");
+        return null;
+    } else if (nodes === false) {
+        console.error("Nodes not found in storage");
+        return false;
+    }
+    return nodes;
+}
+
 
 /***** General Helper Function ******/
 function generateRandomId() {

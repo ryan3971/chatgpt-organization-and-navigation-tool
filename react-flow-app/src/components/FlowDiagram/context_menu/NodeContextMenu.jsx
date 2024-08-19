@@ -1,15 +1,15 @@
 import "./NodeContextMenu.css";
-import * as Constants from "../helper/constants";
-import {sendMessageToBackground} from "../helper/chromeMessagingService";
+import * as Constants from "../../../util/constants";
+import {sendMessageToBackground} from "../../../util/chromeMessagingService";
 
 export default function NodeContextMenu({ id, top, left, right, bottom, ...props }) {
 
 	function handleDeleteNode()	{
 		console.log("React Application - Deleting Node");
-		const response = sendMessageToBackground(Constants.HANDLE_NODE_DELETION, { node_id: id });
-		if (!response) {
-			console.error("Error deleting node");
-		}
+		// const response = sendMessageToBackground(Constants.HANDLE_NODE_DELETION, { node_id: id });
+		// if (!response.status) {
+		// 	console.error("Error deleting node");
+		// }
 	}
 	
 	function handleOpenChat()	{

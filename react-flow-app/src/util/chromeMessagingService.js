@@ -1,12 +1,12 @@
+/*global chrome*/
 
 // Send in format {action: ..., node_data: ..., data: ...}
 // Receive in format {status: ..., data: ...}
-export async function sendMessageToBackground(message_key, message_data) {
-
-    if (!chrome.runtime) {
-        console.error("Chrome runtime is not available");
-        return null;
-    }
+export async function sendMessageToBackground(message_key, message_data=null) {
+	if (!chrome.runtime) {
+		console.error("Chrome runtime is not available");
+		return null;
+	}
 
 	const message = {
 		action: message_key,

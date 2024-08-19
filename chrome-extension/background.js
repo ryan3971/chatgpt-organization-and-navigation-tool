@@ -5,6 +5,8 @@ import {
 	createNewNodeBranch,
 	updateNodeTitle,
 	deleteNode,
+	getNodeSpaces,
+	getNodeSpaceData,
 } from "./background_helpers/helper_functions.js";
 import * as Constants from "./Constants/constants.js";
 
@@ -16,10 +18,11 @@ import * as Constants from "./Constants/constants.js";
 // Variable used for state management
 let state = {
 	isNewBranchNode: false,
+	reactWindowId: null,
+	lastActiveChatId: null,
 
 	// hasNewNode: false,
 	// lastActiveChatId: null,
-	// overviewWindowId: null,
 };
 
 let branchParentData = {
@@ -40,9 +43,6 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 	const hostname = url.hostname; // e.g., chatgpt.com
 
 	if (hostname !== Constants.CHATGPT_HOSTNAME) return; // Not ChatGPT
-
-	//state.lastActiveChatId = tab.id;
-	//console.log("Last active ChatGPT tab ID Saved:", state.lastActiveChatId);
 
 	// We need to send the Constants to the content script
 	response = await sendMessage(tab.id, Constants.CONTENT_SCRIPT_CONSTANTS, Constants);
@@ -106,6 +106,11 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		}
 	}
 
+	// save the tab id so we know which tab was last active
+	state.lastActiveChatId = tab.id;
+	console.log("Last active ChatGPT tab ID Saved:", state.lastActiveChatId);
+
+	// Send the node data to the content script
 	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, message);
 	if (!response.status) {
 		console.error("Error updating content script temp data");
@@ -113,7 +118,7 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 	}
 }
 
-/***** Context Menu Setup */
+/***** Context Menu Setup ******/
 chrome.runtime.onInstalled.addListener(() => {
 	chrome.contextMenus.create({
 		id: Constants.CONTEXT_MENU_CREATE_BRANCH_NODE,
@@ -149,6 +154,41 @@ function handleContextMenuClick(info, tab) {
 		console.error("Unknown context menu item clicked:", info.menuItemId);
 	}
 }
+
+/*****React Application Handlers ******/
+chrome.action.onClicked.addListener(openOverviewWindow);
+
+function openOverviewWindow() {
+
+	// Check if the window already exists
+	if (state.reactWindowId) {
+		console.log("React window already exists. Focusing on it.");
+		chrome.windows.update(state.reactWindowId, { focused: true });
+		return true;
+	}
+
+	console.log("Action button clicked. Opening window.");
+
+	chrome.windows.create({
+		url: "index.html",
+		type: "popup",
+		width: 1200,
+		height: 1200,
+		focused: true,
+	}, function(window) {
+  		state.reactWindowId = window.id;
+	});
+}
+chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
+
+function handleOverviewWindowClose(windowId) {
+	if (windowId === state.reactWindowId) {
+		state.reactWindowId = null;
+		console.log("React window was closed.");
+	}
+}
+
+/***** Event Handlers ******/
 
 async function createParentNode(info, tab) {
 	console.log("Setting Parent Node");
@@ -346,6 +386,20 @@ async function deleteChat(data) {
 	return true;
 }
 
+async function getNodeSpaceKeys() {
+	// Get the node space keys
+	const node_space_keys = await getNodeSpaces();
+	return node_space_keys;
+}
+
+async function getNodeSpace(space_id) {
+	// Get the node space data
+	const node_space_data = await getNodeSpaceData(space_id);
+	return node_space_data;
+}	
+
+/***** Messaging ******/
+
 // Send in format {action: ..., data: ...}
 // Receive in format {status: ..., data: ...}
 async function sendMessage(tabId, message_key, message_data=null) {
@@ -368,7 +422,11 @@ async function sendMessage(tabId, message_key, message_data=null) {
 // Respond in format {status: ..., data: ...}
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	
-	const node_data = message.node_data;
+	console.log("Info on sender:" , sender);
+	var node_data = null;
+	if (sender.origin === Constants.CHATGPT_ORIGIN) {
+		node_data = message.node_data;
+	}
 	const data = message.data;
 
 	var response = {
@@ -406,6 +464,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 				sendResponse(response);
 			});
 			break;
+		case Constants.REACT_APP_MOUNTED:
+			console.log("Received message that React application mounted");
+			getNodeSpaceKeys().then((node_space_keys) => {
+				if (node_space_keys) {
+					response.status = true;
+					response.data = node_space_keys;
+				}
+				sendResponse(response);
+			});
+			break;
+		case Constants.GET_NODE_SPACE_DATA:
+			console.log("Received message from React application to get node space data");
+			getNodeSpace(data.space_id).then((node_space_data) => {
+				if (node_space_data) {
+					response.status = true;
+					response.data = node_space_data;
+				}
+				sendResponse(response);
+			});
+			break;
 		default:
 			console.error("Unknown action:", message.action);
 			sendResponse(response);
@@ -427,159 +505,6 @@ async function notifyUser(action_type, invalid_action_message) {
 		});
 	});
 }
-
-
-// 	if (message.action === "updateContextMenu") {
-
-
-// /* CONSTANT DEFINITIONS */
-// // const TEST_NEW_NODE = [
-// // 	{
-// // 		node_parent_id: "",
-// // 		node_branch_id: "test_is",
-// // 		node_parent_title: "text",
-// // 		edge_selected_text: "sample_title",
-// // 	},
-// // ];
-
-// // const TEST_NODES = [
-// // 	{
-// // 		node_id: "1",
-// // 		node_type: "default",
-// // 		node_position: { x: 250, y: 5 },
-// // 		node_data: {
-// // 			node_data_title: "Node 1",
-// // 		},
-// // 	},
-// // ];
-
-// const CHATGPT_ORIGIN = "https://chatgpt.com"
-// const CHATGPT_HOSTNAME = "chatgpt.com";
-
-// // Variable used for state management
-// let state = {
-// 	hasNewNode: false,
-// 	lastActiveChatId: null,
-// 	overviewWindowId: null,
-// };
-
-
-
-// chrome.tabs.onUpdated.addListener(handleTabUpdate);
-
-// async function handleTabUpdate(tabId, changeInfo, tab) {
-// 	// New webpage open, is it ChatGPT?
-// 	const url = new URL(tab.url);
-// 	const hostname = url.hostname; // e.g., chatgpt.com
-
-// 	if (hostname !== CHATGPT_HOSTNAME) return;
-
-// 	state.lastActiveChatId = tab.id;
-// 	console.log("Last active ChatGPT tab ID Saved:", state.lastActiveChatId);
-
-// 	if (changeInfo.url && state.hasNewNode) {
-// 		const url = new URL(changeInfo.url);
-
-// 		const hostname = url.hostname; // e.g., chatgpt.com
-// 		const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-
-// 		// check if hostname is chatgpt and chat_id is empty
-// 		if (hostname === CHATGPT_HOSTNAME && chatId === "/") {
-// 			console.log("URL is a new ChatGPT page: ", url);
-// 			return;
-// 		}
-// 		// Either we have new chat that is a branch or we have navigated to a new page
-// 		state.hasNewNode = false;
-
-// 		const { new_nodes: newNodesStor } = await getFromStorage("new_nodes");
-
-// 		let response = await sendMessageToTab(tab.id, { action: "extractTitle" });
-// 		const titleText = response.title;
-
-// 		// Check the following:
-// 		// 1) if the URL is a ChatGPT conversation page
-// 		// 2) the url has an id (meaning the chat page has been used)
-// 		// 3) The chat title is "ChatGPT"
-// 		if (hostname === CHATGPT_HOSTNAME && chatId.startsWith("/c/") && titleText === "ChatGPT") {
-// 			// We have a new chat that is a branch.
-// 			console.log("URL is a ChatGPT conversation page: ", url);
-
-// 			// search the new_nodes_stor for an element with an empty branch_id and return the element index
-// 			const index = newNodesStor.findIndex((node) => !node.node_branch_id);
-
-// 			if (index != -1) {
-// 				newNodesStor[index].node_branch_id = chatId;
-// 				console.log("Updated newNode: ", newNodesStor[index].node_branch_id);
-
-// 				let response = await setToStorage({ new_nodes: newNodesStor });
-// 				console.log("Node branch ID updated to storage: ", response);
-// 			} else {
-// 				// No newNode with an empty branch_id found
-// 				console.warn("No newNode with an empty branch_id found. This should not happen...");
-// 			}
-// 		} else {
-// 			// We have navigated to a new page or chat; remove the newNode element with an empty branch_id from storage
-// 			const updated_new_nodes_stor = newNodesStor.filter((node) => node.node_branch_id); // Remove the newNode with an empty branch_id (check if truthy)
-
-// 			let response = await setToStorage({ new_nodes: updated_new_nodes_stor });
-// 			console.log("New Node branch removed from storage: ", response);
-// 		}
-// 	}
-// }
-
-
-// async function saveHighlightedText(info, tab) {
-// 	console.log("Saving Highlighted Text");
-
-// 	let titleText = "", response;
-// 	const selectedText = info.selectionText;
-// 	const url = new URL(info.pageUrl);
-
-// 	//const hostname = url.hostname; // e.g., chatgpt.com
-// 	const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-
-// 	try {
-// 		response = await sendMessageToTab(tab.id, { action: "extractTitle" });
-// 		titleText = response.title;
-// 	} catch (error) {
-// 		console.error("Error extracting title from the page: ", error);
-// 	}
-
-// 	console.log("Selected text:", selectedText);
-// 	console.log("Pathname:", chatId);
-
-// 	// Format the data as specified
-// 	const new_node = {
-// 		node_parent_id: chatId,
-// 		node_branch_id: "",
-// 		node_parent_title: titleText,
-// 		edge_selected_text: selectedText,
-// 	};
-
-// 	// temporary code to test the storage (reset the storage)
-// 	//await setToStorage({ new_nodes: TEST_NEW_NODE });
-// 	//await setToStorage({ nodes: TEST_NODES });
-
-// 	// Retrieve the newNodes from storage
-// 	const { new_nodes: newNodesStor } = await getFromStorage("new_nodes");
-// 	console.log("Data retrieved from storage (this may be empty, that is fine):", newNodesStor);
-
-// 	const updatedNewNodesStor = newNodesStor ? [...newNodesStor, new_node] : [new_node];
-
-// 	// Save the newNode to storage
-// 	response = await setToStorage({ new_nodes: updatedNewNodesStor });
-// 	console.log("Data saved to storage:", response);
-
-// 	// Set the state to indicate a new node has been created
-// 	state.hasNewNode = true;
-
-// 	// Open a new ChatGPT chat in the current tab
-// 	const newUrl = "https://chatgpt.com/"; //chatgpt_hostname;
-
-// 	//Query the active tab
-// 	chrome.tabs.update(tab.id, { url: newUrl });
-// 	console.log("Opened new ChatGPT chat in the current tab: ", newUrl);
-// }
 
 
 
