@@ -7,7 +7,7 @@ const workspaces = [
 	// Add more workspaces as needed
 ];
 
-const SidePanel = ({ isOpen, onClose, onWorkspaceSelect }) => {
+const SidePanel = ({ isOpen, onClose, onWorkspaceSelect, nodeSpaces }) => {
 	return (
 		<div
 			className={`fixed left-0 top-0 h-screen w-1/4 bg-gray-800 p-4 shadow-lg transform ${

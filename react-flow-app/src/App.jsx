@@ -2,22 +2,28 @@ import { ReactFlowProvider } from "@xyflow/react";
 import Flow from './components/FlowDiagram/FlowDiagram';
 import { useState } from 'react';
 
+import {useNavPanel} from './hooks/useNavPanel';
 import SidePanel from './components/NodeSpacePanel/SidePanel';
+
+import { sendMessageToBackground } from "./helper/chromeMessagingService";
+import * as Constants from "./helper/constants";
+
 const App = () => {
-	const [isPanelOpen, setIsPanelOpen] = useState(false);
-	
-	const handleWorkspaceSelect = (workspaceId) => {
-			// Logic to load the selected workspace
-			console.log(`Selected workspace ID: ${workspaceId}`);
-	};
+	const [isPanelOpen, togglePanel] = useNavPanel(false);
 
-	const togglePanel = () => {
-		setIsPanelOpen(!isPanelOpen);
-	};
+	// useEffect for initial setup
+	useEffect(() => {
+		sendMessageToBackground(Constants.REACT_GET_NODE_SPACE_KEYS).then((response) => {
+			if (!response.status) {
+				console.error("Error getting space keys");
+			}
+			const nodeSpaceKeys = response.data;
+			setSpace(nodeSpaceKeys);
 
-	const closePanel = () => {
-		setIsPanelOpen(false);
-	};
+			console.log("React Application - Received Space Keys");
+			console.log(response);
+		});
+	}, []);
 
 	// The Flow component renders the ReactFlow component with the nodes and edges arrays as props. It also renders the Controls, MiniMap, and Background components.
 	return (
@@ -29,7 +35,7 @@ const App = () => {
 				{isPanelOpen ? "Close Panel" : "Open Panel"}
 			</button>
 			<Flow />
-			<SidePanel isOpen={isPanelOpen} onClose={closePanel} onWorkspaceSelect={handleWorkspaceSelect} />
+			<SidePanel isOpen={isPanelOpen} onClose={togglePanel} />
 		</ReactFlowProvider>
 	);
 };
