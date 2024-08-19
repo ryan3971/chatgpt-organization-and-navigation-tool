@@ -236,6 +236,13 @@ async function createParentNode(info, tab) {
 		return;
 	}
 
+	// send message to get the messages from the chat
+	response = await sendMessage(tab.id, Constants.UPDATE_NODE_MESSAGES);
+	if (!response.status) {
+		notifyUser(Constants.ERROR, "Error getting node data");
+		return;
+	}
+
 	console.log("Parent Node Created");
 }
 

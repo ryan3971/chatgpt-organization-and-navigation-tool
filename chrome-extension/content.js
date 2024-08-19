@@ -284,7 +284,7 @@ async function getSelectedText() {
 
 			// get just the number from the data-testid by splitting it on conversation-turn-
 			var selectedTextContainerId = dataTestId.split("conversation-turn-")[1];
-			selectedTextContainerId = (selectedTextContainerId - 2) % 2 // divide by two to account for the messages being paired, minus 2 becuase the conversation turn starts at 2
+			selectedTextContainerId = (selectedTextContainerId / 2);// - 2) / 2 // divide by two to account for the messages being paired, minus 2 becuase the conversation turn starts at 2
 
 			// return the selected text and the data-testid value
 			response.flag = Constants.VALID_TEXT_SELECTION;
@@ -387,6 +387,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 						response.status = false;
 						response.data = flag;
 					}
+					sendResponse(response);
+				});
+				break;
+			case Constants.UPDATE_NODE_MESSAGES:
+				const nodeMessages = getNodeMessages();
+				sendMessage(Constants.UPDATE_NODE_MESSAGES, nodeMessages).then((response) => {
 					sendResponse(response);
 				});
 				break;
