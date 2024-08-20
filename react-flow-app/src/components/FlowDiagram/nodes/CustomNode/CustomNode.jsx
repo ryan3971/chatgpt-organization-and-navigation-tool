@@ -1,29 +1,69 @@
-import { Handle } from "@xyflow/react";
+import React from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { Card, Container, Row, Col } from "react-bootstrap";
+
+import { Handle, Position } from "@xyflow/react";
+
+import Title from "./NodeTitle";
 import MessageTable from "./MessageTable";
 import CustomHandle from "./CustomHandle";
-import Title from "./NodeTitle";
-import { COLUMN_WIDTH, DEFAULT_NODE_WIDTH } from "../../../../util/constants";
 
 const CustomNode = ({ id, data }) => {
 	const { title, messages, branches, isParent } = data;
-	const nodeWidth = Math.max(DEFAULT_NODE_WIDTH, messages.length * COLUMN_WIDTH);
+	const totalColumns = messages.length; // Assuming each message corresponds to a column
 
 	return (
-		<div className="bg-white border-black border-2 rounded-lg p-2 w-auto min-w-[12rem] h-40">
-			{/* Title */}
-			<Title title={title} />
+		<Card
+			className="border-light shadow-sm rounded-lg"
+			style={{ minWidth: "12rem", padding: "10px", backgroundColor: "#f4f4f9", position: "relative" }}
+		>
+			<Card.Header
+				className="text-center p-2"
+				style={{ backgroundColor: "#fff", borderBottom: "none", fontWeight: "600" }}
+			>
+				<Title title={title} />
+			</Card.Header>
 
-			{/* Message Table */}
-			<MessageTable 
-				messages={messages} 
-			/>
+			<Card.Body
+				className="d-flex justify-content-center align-items-center"
+				style={{ padding: "10px" }}
+			>
+				<Container fluid>
+					<Row className="justify-content-center">
+						{/* Message Table */}
+						<MessageTable messages={messages} />
+					</Row>
+				</Container>
+			</Card.Body>
 
-			{/* Handles */}
-			{!isParent && <Handle type="target" position="top" className="w-4 h-4 bg-black" />}
-			{Object.keys(branches).map((branch_key) => {
-				return <CustomHandle key={branch_key} branch={branches[branch_key]} />;
+			{/* Top Handle if node is a parent */}
+			{!isParent && (
+				<Handle
+					type="target"
+					position={Position.Top}
+					className="bg-dark rounded-circle"
+					style={{
+						top: "-8px", // Slightly above the top of the card
+						left: "50%",
+						transform: "translateX(-50%)", // Centered horizontally
+						width: "16px",
+						height: "16px",
+					}}
+				/>
+			)}
+
+			{/* Handles for branches */}
+			{Object.keys(branches).map((key, index) => {
+				const branch = branches[key];
+				return (
+					<CustomHandle
+						key={index}
+						branch={branch}
+						totalColumns={totalColumns}
+					/>
+				);
 			})}
-		</div>
+		</Card>
 	);
 };
 

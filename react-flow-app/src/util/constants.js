@@ -16,5 +16,6 @@ export const GET_NODE_SPACE_DATA = "get_node_space_data";
 
 
 export const HANDLE_NODE_DELETION = "handle_node_deletion";
+export const HANDLE_OPEN_NODE_CHAT = "handle_open_node_chat";
 export const REACT_GET_NODE_SPACE_KEYS = "react_get_node_space_keys";
 

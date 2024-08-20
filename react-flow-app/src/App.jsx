@@ -8,7 +8,16 @@ import SidePanel from "./components/NodeSpacePanel/SidePanel";
 import { sendMessageToBackground } from "./util/chromeMessagingService";
 import * as Constants from "./util/constants";
 
-//const initialSpaceKeys = [1, 2, 3, 4, 5];
+const initialSpaceKeys = [1, 2, 3, 4, 5];
+
+import gpt_image from "./assets/gpt_logo.png";
+
+const initialNodeSpaces = [
+	{ id: 1, title: "Nodespace 1", imageUrl: gpt_image, infoText: "Info 1" },
+	{ id: 2, title: "Nodespace 2", imageUrl: gpt_image, infoText: "Info 2" },
+	{ id: 3, title: "Nodespace 3", imageUrl: gpt_image, infoText: "Info 3" },
+];
+
 
 const App = () => {
 	const [isPanelOpen, { togglePanel }] = useNavPanel(false);
@@ -16,18 +25,18 @@ const App = () => {
 	const [activeSpace, setActiveSpace] = useState(null);
 
 	// useEffect to tell the chrome application that react app has mounted
-	// useEffect(() => {
-	// 	console.log("Sending message to background script to notify that React app has mounted");
-	// 	sendMessageToBackground(Constants.REACT_APP_MOUNTED).then((response) => {
-	// 		if (!response.status) {
-	// 			console.error("Error sending message to background script");
-	// 			return;
-	// 		}
+	useEffect(() => {
+		console.log("Sending message to background script to notify that React app has mounted");
+		sendMessageToBackground(Constants.REACT_APP_MOUNTED).then((response) => {
+			if (!response.status) {
+				console.error("Error sending message to background script");
+				return;
+			}
 
-	// 		const node_spaces = response.data;
-	// 		setSpaces(node_spaces);
-	// 	});
-	// }, [setSpaces]);
+			const node_spaces = response.data;
+			setSpaces(node_spaces);
+		});
+	}, [setSpaces]);
 
 	const handleUpdateActiveSpace = (spaceId) => {
 		console.log(`Selected workspace ID: ${spaceId}`);
@@ -45,7 +54,7 @@ const App = () => {
 			{!isPanelOpen && (
 				<button
 					onClick={togglePanel}
-					className="m-5 p-5 fixed left-0 top-0 h-50 w-100 bg-blue-500 text-white rounded-lg focus:outline-none hover:bg-blue-600 transition-colors z-10"
+					className="m-5 p-5 fixed left-0 top-0 h-5 w-10 bg-blue-500 text-white rounded-lg focus:outline-none hover:bg-blue-600 transition-colors z-10"
 				>
 					{isPanelOpen ? "Close Panel" : "Open Panel"}
 				</button>

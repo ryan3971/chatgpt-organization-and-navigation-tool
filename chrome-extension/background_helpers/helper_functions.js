@@ -149,7 +149,7 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
     // iterate through the branches and check if the selected text container is greater than the length of the messages
     for (const branch_id in node.branches) {
         let selectedTextContainerId = node.branches[branch_id].selectedTextContainerId;
-        selectedTextContainerId = Number(selectedTextContainerId);  // convert back to number
+        selectedTextContainerId = Number(selectedTextContainerId) - 1;  // convert back to number, subtract 1 to account for containers beginning at 1
 
         if (selectedTextContainerId > messagesLength) {
             // set the selected text container id to be null

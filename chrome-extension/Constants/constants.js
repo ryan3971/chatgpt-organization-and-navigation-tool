@@ -69,5 +69,4 @@ export const REACT_OPEN_CHAT = "open_chat";
 export const REACT_GET_NODE_SPACE_KEYS = "react_get_node_space_keys";
 export const REACT_APP_MOUNTED = "react_app_mounted";
 export const GET_NODE_SPACE_DATA = "get_node_space_data";
-
-
+export const HANDLE_OPEN_NODE_CHAT = "handle_open_node_chat";

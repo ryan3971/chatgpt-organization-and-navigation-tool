@@ -27,6 +27,8 @@ export const transformStorageData = (storageData) => {
 		// If the item includes information about connections, create edges
 			Object.keys(branches).forEach((branch_key) => {
                 const branch = branches[branch_key];
+				console.log("Branch:", branch);
+				console.log("Selected Text Container ID:", branch.selectedTextContainerId);
 
 				const new_edge = {
 					id: `${node_key}-${branch_key}`,

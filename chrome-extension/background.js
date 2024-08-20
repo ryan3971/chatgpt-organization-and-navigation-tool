@@ -491,6 +491,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 				sendResponse(response);
 			});
 			break;
+		case Constants.HANDLE_OPEN_NODE_CHAT:
+			console.log("Received message to open chat for node", data.id);
+			// Open the chat for the node
+			const node_id = data.id;
+			const url = `${Constants.CHATGPT_ORIGIN}${node_id}`;
+			chrome.tabs.create({ url: url });
+
+			response.status = true;
+			sendResponse(response);
+			break;
 		default:
 			console.error("Unknown action:", message.action);
 			sendResponse(response);
@@ -512,113 +522,3 @@ async function notifyUser(action_type, invalid_action_message) {
 		});
 	});
 }
-
-
-
-// // Function to message the react application, if the window is open
-
-// chrome.action.onClicked.addListener(openOverviewWindow);
-
-// chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
-
-// function openOverviewWindow() {
-
-// 	// Check if the window already exists
-// 	if (state.overviewWindowId) {
-// 		chrome.windows.update(state.overviewWindowId, { focused: true });
-// 		return;
-// 	}
-
-// 	console.log("Action button clicked. Opening window.");
-
-// 	chrome.windows.create({
-// 		url: "index.html",
-// 		type: "popup",
-// 		width: 800,
-// 		height: 600,
-// 		focused: true,
-// 	}, function(window) {
-//   		state.overviewWindowId = window.id;
-// 	});
-// }
-
-// function handleOverviewWindowClose(windowId) {
-// 	if (windowId === state.overviewWindowId) {
-// 		state.overviewWindowId = null;
-// 		console.log("Overview window was closed.");
-// 	}
-// }
-
-// /*
-// Note: Keeping .catch for each promise to make debugging easier.
-// 	  Might change it from throwing an error to just a warning
-// */
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-// 	if (message.action === "updateContextMenu") {
-// 		chrome.contextMenus.update("saveHighlightedText", {enabled: message.enabled,})
-// 			.then(() => {
-// 				sendResponse({ success: true });
-// 			}).catch((error) => {
-// 				console.error("Error updating context menu: ", error);
-// 				sendResponse({ success: false });
-// 			});
-
-// 	} else if (message.action === "updateDiagram")	{
-// 		chrome.tabs.get(state.lastActiveChatId)
-// 			.then((tab) => {
-// 				if (!tab) {
-// 					console.error("Error getting tab: ", chrome.runtime.lastError.message);
-// 				}
-// 				console.log("Last active chat tab found");
-
-// 				const response = sendMessageToTab(tab.id, { action: "getPanelData" })
-// 				return response;
-// 			})
-// 			.then((response) => {
-// 				if (!response) {
-// 					console.error("Error getting panel data: ", chrome.runtime.lastError.message);
-// 				}
-// 				console.log("Response from getPanelData: ", response);
-// 				sendResponse({ success: true });
-// 			})
-// 			.catch((error) => {
-// 				console.error("Error updating diagram: ", error);
-// 				sendResponse({ success: false });
-// 			});
-// 	} else if (message.action === "openChat") 		{
-// 		const chatId = message.nodeId;
-// 		const chatUrl = `${CHATGPT_ORIGIN}${chatId}`
-// 		// Launch in the last active chatGPT tab or create a new tab
-// 		if (state.lastActiveChatId) {
-// 			chrome.tabs.update(state.lastActiveChatId, { url: chatUrl });
-// 		} else {
-// 			chrome.tabs.create({ url: chatUrl });
-// 		}
-// 		sendResponse({ success: true });
-
-// 	} else if (message.action === "getFromStorage") {
-// 		chrome.storage.sync.get(message.key)
-// 			.then((result) => {
-// 				console.log("Data retrieved from storage: ", result[message.key]);
-// 				sendResponse({ success: true, data: result[message.key] });
-// 			}).catch((error) => {
-// 				console.error("Error getting from storage: ", error);
-// 				sendResponse({ success: false });
-// 		});
-// 	} else if (message.action === "setToStorage") {
-// 		const data = { [message.key]: message.value };
-// 		console.log("Data saved to storage: ", data);
-// 		chrome.storage.sync.set(data)
-// 		.then(() => {
-// 			sendResponse({ success: true });
-// 		}).catch((error) => {
-// 			console.error("Error setting to storage: ", error);
-// 			sendResponse({ success: false });
-// 		});
-// 	} else {
-// 		console.error("Unknown storage action: ", message.action);
-// 		sendResponse({ success: false });
-// 	}
-
-// 	return true; // Keeps the message channel open for sendResponse
-// });

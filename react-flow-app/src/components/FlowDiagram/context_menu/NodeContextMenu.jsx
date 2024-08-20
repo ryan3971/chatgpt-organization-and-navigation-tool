@@ -4,28 +4,23 @@ import {sendMessageToBackground} from "../../../util/chromeMessagingService";
 
 export default function NodeContextMenu({ id, top, left, right, bottom, ...props }) {
 
-	function handleDeleteNode()	{
-		console.log("React Application - Deleting Node");
-		// const response = sendMessageToBackground(Constants.HANDLE_NODE_DELETION, { node_id: id });
-		// if (!response.status) {
-		// 	console.error("Error deleting node");
-		// }
-	}
+	// send a message to chrome passing the id to the node when button is clicked
+	const handleOpenChat = () => {
+		console.log("Opening chat for node", id);
+		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, { id }).then((response) => {
+			if (!response.status) {
+				console.error("Error sending message to background script");
+				return;
+			}
+		});
+	};
 	
-	function handleOpenChat()	{
-		console.log("React Application - Opening Chat");
-		// const response = sendMessageToBackground(Constants.REACT_OPEN_CHAT, { node_id: id });
-		// if (!response) {
-		// 	console.error("Error opening chat");
-		// }
-	}
 
 	return (
 		<div style={{ top, left, right, bottom }} className="context-menu" {...props}>
 			<p style={{ margin: "0.5em" }}>
 				<small>node: {id}</small>
 			</p>
-			<button onClick={handleDeleteNode}>Delete Chat</button>
 			<button onClick={handleOpenChat}>Open Chat</button>
 		</div>
 	);

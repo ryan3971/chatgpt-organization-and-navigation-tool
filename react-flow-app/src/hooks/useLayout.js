@@ -21,7 +21,7 @@ export default function useLayout() {
 			const layoutedElements = getLayoutedElements(currentNodes, currentEdges, { direction: "TB" });
 			setLayout({nodes: layoutedElements.nodes, edges: layoutedElements.edges});	// redundant but reminder of the key value pair
 		}
-	}, [nodesInitialized]);
+	}, [nodesInitialized, getNodes, getEdges]);
 
 	return [layout];
 }
