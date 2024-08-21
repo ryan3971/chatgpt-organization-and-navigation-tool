@@ -8,7 +8,7 @@ export default function NodeContextMenu({ id, top, left, right, bottom, ...props
 	const handleOpenChat = () => {
 		console.log("Opening chat for node", id);
 
-		data = {
+		const data = {
 			node_id: id,
 			message_index: null,
 		};

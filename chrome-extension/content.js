@@ -1,7 +1,3 @@
-//import * as Constants from "./Constants/constants.js";
-
-//let Constants = chrome.runtime.getURL("Constants/constants.js");
-
 var Constants = null;
 
 var tempStorage = {
@@ -11,6 +7,28 @@ var tempStorage = {
 	node_title: null,
 	selected_text_data: null,
 };
+
+// ChatGPT html references elements
+const CHATGPT_STOP_BUTTON_ELEMENT = '[data-testid="stop-button"]';
+const CHATGPT_NAV_PANEL_ELEMENT = "nav[class]";
+const CHATGPT_TITLE_INPUT_ELEMENT = 'input[type="text"]';
+const CHATGPT_BUTTON_DANGER_ATTRIBUTE = "button.btn-danger";
+const CHATGPT_BUTTON_DANGER_INNER_TEXT = "Delete";
+const CHATGPT_HREF_ATTRIBUTE = 'a[href*="/c/"]';
+
+const CHATGPT_DATA_TEST_ID_ATTRIBUTE = "data-testid";
+const CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE = '[data-message-id]';
+
+const CHATGPT_HREF_ATTRIBUTE_START = 'a[href*="';
+const CHATGPT_MESSAGE_CONTAINER_START = '[data-testid="conversation-turn-';
+
+const HTML_GENERIC_CLOSING = '"]';
+
+const HTML_LIST_TAG = "li";
+const HTML_ANCHOR_TAG = "a";
+const HTML_HREF_ATTRIBUTE = "href";
+
+const CONTENT_SCRIPT_CONSTANTS = "content_script_constants";
 
 /************** Mutation Observer Section **************/
 
@@ -31,7 +49,6 @@ let inputFieldFound = false;	//Used to detect when a node title is being edited
 let navPanelNodeIds = [];
 let renamedNodeData = {};
 
-//let navPanelFirstOpened = false;
 var creatingNewBranchNode = false;
 
 // Function to check and handle the presence of elements of interest
@@ -39,8 +56,8 @@ async function checkAndHandleElements(observer, mutation) {
 	if (!Constants) return; // Wait for the constants to be loaded
 
 	// Interested in the send button and the navigational panel
-	const stopButton = document.querySelector('[data-testid="stop-button"]');
-	const navPanel = document.querySelector("nav[class]");
+	const stopButton = document.querySelector(CHATGPT_STOP_BUTTON_ELEMENT);
+	const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
 
 	// Use this to "detect" new messages in the node
 	if (stopButton && !stopButtonFound) {
@@ -73,22 +90,23 @@ async function checkAndHandleElements(observer, mutation) {
 
 	if (navPanel)	{
 		//const deleteDialog = document.querySelector('div[role="dialog"]');
-		const inputField = document.querySelector('input[type="text"]');
-		const dangerButton = document.querySelector("button.btn-danger");
+		const inputField = document.querySelector(CHATGPT_TITLE_INPUT_ELEMENT);
+		const dangerButton = document.querySelector(CHATGPT_BUTTON_DANGER_ATTRIBUTE);
 
-		if (dangerButton && dangerButton.innerText.trim() === "Delete" && !deleteDialogFound) {
+		if (dangerButton && dangerButton.innerText.trim() === CHATGPT_BUTTON_DANGER_INNER_TEXT && !deleteDialogFound) {
 			console.log("Delete dialog appeared in the DOM");
 			deleteDialogFound = true;
-			const navPanelElements = navPanel.querySelectorAll('a[href*="/c/"]');
+			const navPanelElements = navPanel.querySelectorAll(CHATGPT_HREF_ATTRIBUTE);
 			navPanelNodeIds = getIDfromHref(navPanelElements); // store the node ids from the nav panel into an array
-		} else if ((!dangerButton && deleteDialogFound) || (dangerButton && dangerButton.innerText.trim() !== "Delete" && deleteDialogFound)) {
+		
+		} else if ((!dangerButton && deleteDialogFound) || (dangerButton && dangerButton.innerText.trim() !== CHATGPT_BUTTON_DANGER_INNER_TEXT && deleteDialogFound)) {
 			console.log("Delete dialog disappeared from the DOM...and it was there before");
 			deleteDialogFound = false;
 
 			// set a timeout to give time for the node to be deleted from the nav panel
 			setTimeout(() => {
 				// query nav panel for all node elements, het the ids for them
-				const navPanelElements = navPanel.querySelectorAll('a[href*="/c/"]');
+				const navPanelElements = navPanel.querySelectorAll(CHATGPT_HREF_ATTRIBUTE);
 				const updatedNavPanelIds = getIDfromHref(navPanelElements);
 
 				// compare the two arrays to find the deleted node id
@@ -108,8 +126,8 @@ async function checkAndHandleElements(observer, mutation) {
 			console.log("Input field appeared in the DOM");
 			inputFieldFound = true;
 
-			const parentElement = inputField.closest("li");
-			const nodeHref = parentElement.querySelector("a").getAttribute("href");
+			const parentElement = inputField.closest(HTML_LIST_TAG);
+			const nodeHref = parentElement.querySelector(HTML_ANCHOR_TAG).getAttribute(HTML_HREF_ATTRIBUTE);
 			const nodeTitle = parentElement.innerText;
 			renamedNodeData = { node_href: nodeHref, node_title: nodeTitle };
 		} else if (!inputField && inputFieldFound) {
@@ -118,8 +136,8 @@ async function checkAndHandleElements(observer, mutation) {
 
 			// set a timeout to give time for the node title to be updated in the nav panel
 			setTimeout(() => {
-				const nodeHref = renamedNodeData.node_href;
-				const navPanelElement = navPanel.querySelector(`a[href*="${nodeHref}"]`);
+				const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + renamedNodeData.node_href + HTML_GENERIC_CLOSING;
+				const navPanelElement = navPanel.querySelector(nodeHref);
 				const nodeTitle = navPanelElement.innerText;
 
 				if (nodeTitle !== renamedNodeData.node_title) {
@@ -179,7 +197,8 @@ async function createNewBranchNode(navPanel) {
 	const url = new URL(window.location.href);
 	const nodeId = url.pathname;
 
-	const nodeTitle = navPanel.querySelector(`a[href*="${nodeId}"]`).innerText; // potential race condition between this and the the nav field being created
+	const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + nodeId + HTML_GENERIC_CLOSING;
+	const nodeTitle = navPanel.querySelector(nodeHref).innerText; // potential race condition between this and the the nav field being created
 
 	const data = {
 		node_id: nodeId,
@@ -211,14 +230,18 @@ function getNodeMessages() {
 	let turnNumber = 2; // Start with 2
 
 	while (true) {
-		const conversationTurn = document.querySelector(`[data-testid="conversation-turn-${turnNumber}"]`);
+		const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(turnNumber) + HTML_GENERIC_CLOSING;
+		const conversationTurn = document.querySelector(containerId);
 
 		if (!conversationTurn) {
 			break; // Exit the loop if no more conversation turns are found
 		}
+		
+		// locate the element within the conversation turn that has the deata-message-id attribute (using this to skip down to the closet identifiable element before the inner text)
+		const dataMessageId = conversationTurn.querySelector(CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE);
 
 		// Extract the text and trim it to the first 100 characters
-		const text = conversationTurn.textContent.trim().substring(0, 100);
+		const text = dataMessageId.textContent.trim().substring(0, 100);
 
 		// Store the data based on whether the turn number is even or odd
 		if (turnNumber % 2 === 0) {
@@ -264,9 +287,9 @@ async function getSelectedText() {
     // Function to find the closest ancestor with the `data-testid` attribute
     const findAncestorWithTestId = (node) => {
         while (node && node !== document.body) {
-            if (node.hasAttribute && node.hasAttribute('data-testid')) {
-                return node;
-            }
+            if (node.hasAttribute && node.hasAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE)) {
+				return node;
+			}
             node = node.parentElement;
         }
         return null;
@@ -277,14 +300,15 @@ async function getSelectedText() {
 
     if (startElement && endElement) {
          if (startElement === endElement) {
-			const dataTestId = startElement.getAttribute("data-testid");
+			const dataTestId = startElement.getAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE);
 			console.log("Selected text is within a single element.");
 			console.log("Selected text: ", selection.toString().trim());
 			console.log("data-testid:", dataTestId);
 
-			// get just the number from the data-testid by splitting it on conversation-turn-
-			var selectedTextContainerId = dataTestId.split("conversation-turn-")[1];
-			selectedTextContainerId = (selectedTextContainerId % 2);// - 2) % 2 // divide by two to account for the messages being paired, minus 2 becuase the conversation turn starts at 2
+			// Extract the number from the conversation-turn attribute
+			var selectedTextContainerId = dataTestId.match(/(\d+)/)
+			
+			selectedTextContainerId = (selectedTextContainerId % 2);// divide by two to account for the messages being paired
 
 			// return the selected text and the data-testid value
 			response.flag = Constants.VALID_TEXT_SELECTION;
@@ -308,13 +332,14 @@ async function getSelectedText() {
 // Function to focus on an element based on data-testid attribute
 function focusChatMessageByTestId(message_index) {
 	message_index = message_index * 2; // Convert the message_id to the conversation-turn number
-	const element = document.querySelector(`[data-testid="conversation-turn-${message_index}"]`);
+	const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(message_index) + HTML_GENERIC_CLOSING;
+	const element = document.querySelector(containerId);
 	
 	console.log("Element:", element);
 	if (element) {
 		element.scrollIntoView({
 			behavior: 'smooth', // Enables the scrolling animation
-			block: 'center',    // Aligns the element to the center of the view
+			block: 'start',    // Aligns the element to the center of the view
 			inline: 'nearest'   // Keeps horizontal alignment as close as possible
 		});
 		element.focus();
@@ -322,9 +347,6 @@ function focusChatMessageByTestId(message_index) {
 		console.error("Element not found:", selector);
 	}
 }
-
-// Listener to check when page is loaded and navigate to specific chat message
-
 
 /************** Message Send/Receive Section **************/
 
@@ -362,7 +384,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 	try {
 		switch (request.action) {
-			case "content_script_constants":
+			case CONTENT_SCRIPT_CONSTANTS:
 				console.log("Received message to get content script constants");
 				Constants = request.data;
 				response.status = true;
@@ -399,7 +421,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			case Constants.GET_SELECTED_TEXT:
 				console.log("Received message to get selected text");
 				getSelectedText().then((selected_text_response) => {
-					const {flag, data} = selected_text_response;
+					const { flag, data } = selected_text_response;
 					if (flag === Constants.VALID_TEXT_SELECTION) {
 						console.log("Selected text is valid. Sending back");
 						response.status = true;
@@ -421,10 +443,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			case Constants.SCROLL_TO_CHAT_MESSAGE:
 				console.log("Received message to scroll to chat message");
 				// Wait for a second before scrolling to the chat message to let chatGPT scrolling animation to end
-				setTimeout(() => {
-					response.status = focusChatMessageByTestId(request.data);
-					sendResponse(response);
-				}, 2000);
+				//setTimeout(() => {
+				response.status = focusChatMessageByTestId(request.data);
+				sendResponse(response);
+				//}, 2000);
 				break;
 			case Constants.ALERT:
 				console.log("Received message to alert");
@@ -436,10 +458,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				console.error("Unknown action:", request.action);
 				sendResponse(response);
 				break;
-			// } else if (request.action === "getPanelData") {
-			// 	searchChatTitlesInSidePanel().then((response) => {;
-			// 		sendResponse({ response: response });
-			// 	});
 		}
 	} catch (error) {
 		console.error("Error in message listener:", error);

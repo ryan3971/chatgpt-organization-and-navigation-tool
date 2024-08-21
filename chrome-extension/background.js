@@ -19,26 +19,24 @@ import * as Constants from "./Constants/constants.js";
 let state = {
 	isNewBranchNode: false,
 	reactWindowId: null,
-	lastActiveChatId: null,
 	navigatedChat : {tabId: null, messageIndex: null},
-
-	// hasNewNode: false,
-	// lastActiveChatId: null,
 };
 
+// store data to pass onto a newly created branch node
 let branchParentData = {
 	node_space_id: null,
 	parent_node_id: null,
 	selected_text_data: null,
 };
 
+// Listen for tab updates
 chrome.tabs.onUpdated.addListener(handleTabUpdate);
 async function handleTabUpdate(tabId, changeInfo, tab) {
 	console.log("Tab updated:", tab.status);
 	if (changeInfo.status !== "complete") return; // Wait for the page to load completely
 	console.log("Tab fully loaded");
 
-	var response;
+	let response;
 	// New webpage open, is it ChatGPT?
 	const url = new URL(tab.url);
 	const hostname = url.hostname; // e.g., chatgpt.com
@@ -46,7 +44,7 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 	if (hostname !== Constants.CHATGPT_HOSTNAME) return; // Not ChatGPT
 
 	// We need to send the Constants to the content script
-	response = await sendMessage(tab.id, Constants.CONTENT_SCRIPT_CONSTANTS, Constants);
+	response = await sendMessage(tabId, Constants.CONTENT_SCRIPT_CONSTANTS, Constants);
 	if (!response.status) {
 		console.error("Error sending constants to content script");
 		return;
@@ -54,7 +52,6 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 
 	// Check the Node URL
 	const nodeId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-	var message;
 	var message = {
 		node_type: null,
 		node_space_id: null,
@@ -78,19 +75,6 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 			message.node_type = Constants.NODE_TYPE_NEW;
 		}
 	} else {
-		// We need to check if this update was caused by a new branch chat first
-		// send a message to the content script to check if the chat is a new branch chat
-		// response = await sendMessage(tab.id, Constants.IS_BRANCH_BEING_CREATED);
-		// if (!response.status) {
-		// 	console.error("Error asking content script if branch is being made");
-		// 	return;
-		// }
-		// if (response.data) {
-		// 	// Branch is being created
-		// 	console.warn("Branch is being created...stop running onUpdate in background");
-		// 	return;
-		// }
-
 		// Existing node
 		response = await doesNodeExist(nodeId);
 		if (!response) {
@@ -107,26 +91,22 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		}
 	}
 
-	// save the tab id so we know which tab was last active
-	state.lastActiveChatId = tab.id;
-	console.log("Last active ChatGPT tab ID Saved:", state.lastActiveChatId);
-
 	// Send the node data to the content script
-	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, message);
+	response = await sendMessage(tabId, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, message);
 	if (!response.status) {
 		console.error("Error updating content script temp data");
 		return;
 	}
 
-	// if this is a chat naviagted to from the react app, scroll to the message index
-	if (state.navigatedChat.tabId === tab.id) {
+	// if this is a chat navigated to from the react app, scroll to the message index
+	if (state.navigatedChat.tabId === tabId) {
 		console.log("Navigating to message index:", state.navigatedChat.messageIndex);
 		sendMessage(tab.id, Constants.SCROLL_TO_CHAT_MESSAGE, state.navigatedChat.messageIndex).then((response) => {
 			if (!response.status) {
 				console.error("Error sending message to scroll to message index. ");
 			}
 		});
-		state.navigatedChat = {tabId: null, messageIndex: null};	// Reset the navigated chat
+		state.navigatedChat = { tabId: null, messageIndex: null }; // Reset the navigated chat
 	}
 }
 
@@ -150,8 +130,8 @@ chrome.runtime.onInstalled.addListener(() => {
 	});
 });
 
+// Handle the context menu click
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
-
 function handleContextMenuClick(info, tab) {
 	console.log("Chrome context menu item clicked");
 
@@ -193,8 +173,9 @@ function openOverviewWindow() {
 		}
 	);
 }
-chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
 
+// Handle the closing of the React window
+chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
 function handleOverviewWindowClose(windowId) {
 	if (windowId === state.reactWindowId) {
 		state.reactWindowId = null;
