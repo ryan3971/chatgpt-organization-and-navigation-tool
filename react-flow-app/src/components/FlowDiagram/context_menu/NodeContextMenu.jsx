@@ -7,7 +7,14 @@ export default function NodeContextMenu({ id, top, left, right, bottom, ...props
 	// send a message to chrome passing the id to the node when button is clicked
 	const handleOpenChat = () => {
 		console.log("Opening chat for node", id);
-		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, { id }).then((response) => {
+
+		data = {
+			node_id: id,
+			message_index: null,
+		};
+		
+
+		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data).then((response) => {
 			if (!response.status) {
 				console.error("Error sending message to background script");
 				return;

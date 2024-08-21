@@ -31,7 +31,7 @@ const CustomNode = ({ id, data }) => {
 				<Container fluid>
 					<Row className="justify-content-center">
 						{/* Message Table */}
-						<MessageTable messages={messages} />
+						<MessageTable node_id={id} messages={messages} />
 					</Row>
 				</Container>
 			</Card.Body>

@@ -19,3 +19,4 @@ export const HANDLE_NODE_DELETION = "handle_node_deletion";
 export const HANDLE_OPEN_NODE_CHAT = "handle_open_node_chat";
 export const REACT_GET_NODE_SPACE_KEYS = "react_get_node_space_keys";
 
+export const HANDLE_OPEN_NODE_CHAT_AT_MESSAGE = "handle_open_node_chat_at_message";

@@ -20,6 +20,7 @@ let state = {
 	isNewBranchNode: false,
 	reactWindowId: null,
 	lastActiveChatId: null,
+	navigatedChat : {tabId: null, messageIndex: null},
 
 	// hasNewNode: false,
 	// lastActiveChatId: null,
@@ -116,6 +117,17 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		console.error("Error updating content script temp data");
 		return;
 	}
+
+	// if this is a chat naviagted to from the react app, scroll to the message index
+	if (state.navigatedChat.tabId === tab.id) {
+		console.log("Navigating to message index:", state.navigatedChat.messageIndex);
+		sendMessage(tab.id, Constants.SCROLL_TO_CHAT_MESSAGE, state.navigatedChat.messageIndex).then((response) => {
+			if (!response.status) {
+				console.error("Error sending message to scroll to message index. ");
+			}
+		});
+		state.navigatedChat = {tabId: null, messageIndex: null};	// Reset the navigated chat
+	}
 }
 
 /***** Context Menu Setup ******/
@@ -159,7 +171,6 @@ function handleContextMenuClick(info, tab) {
 chrome.action.onClicked.addListener(openOverviewWindow);
 
 function openOverviewWindow() {
-
 	// Check if the window already exists
 	if (state.reactWindowId) {
 		console.log("React window already exists. Focusing on it.");
@@ -169,15 +180,18 @@ function openOverviewWindow() {
 
 	console.log("Action button clicked. Opening window.");
 
-	chrome.windows.create({
-		url: "index.html",
-		type: "popup",
-		width: 1200,
-		height: 1200,
-		focused: true,
-	}, function(window) {
-  		state.reactWindowId = window.id;
-	});
+	chrome.windows.create(
+		{
+			url: "index.html",
+			type: "popup",
+			width: 1200,
+			height: 1200,
+			focused: true,
+		},
+		function (window) {
+			state.reactWindowId = window.id;
+		}
+	);
 }
 chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
 
@@ -346,13 +360,12 @@ async function createBranchChat(node_data, data, tab_id) {
 }
 
 async function updateChatMessages(node_data, node_messages) {
-	
 	var response;
 	const node_space_id = node_data.node_space_id;
 	const node_id = node_data.node_id;
 	const node_type = node_data.node_type;
 
-	if (node_type === Constants.NODE_TYPE_EXISTING)	{
+	if (node_type === Constants.NODE_TYPE_EXISTING) {
 		// Update the node messages
 		response = await updateNodeMessages(node_space_id, node_id, node_messages);
 		if (!response) {
@@ -403,13 +416,58 @@ async function getNodeSpace(space_id) {
 	// Get the node space data
 	const node_space_data = await getNodeSpaceData(space_id);
 	return node_space_data;
-}	
+}
+
+function navigateToNodeChatCallback(tab, message_index) {
+
+	// focus on the tab
+	chrome.windows.update(tab.windowId, { focused: true });
+
+	const tab_id = tab.id;
+
+	// Check if a message_index was provided
+	if (!message_index) return;
+	console.log("Sending message to content script to navigate to message index:", message_index);
+
+	// Send a message to the content script to scroll to the message index
+	sendMessage(tab_id, Constants.SCROLL_TO_CHAT_MESSAGE, message_index).then((response) => {
+		if (!response.status) {
+			console.error("Error sending message to scroll to message index");
+		}
+	});
+}
+
+async function handleOpenNodeChat(node_id, message_index) {
+	// Check if there is a tab with the node id in the URL open already
+	chrome.tabs.query({ url: `${Constants.CHATGPT_ORIGIN}${node_id}` }, function (tabs) {
+		console.log("Tabs with the node id in the URL:", tabs);
+		if (tabs.length > 0) {
+			// Update the tab and handle navigation after the tab is updated (set it to active)
+			chrome.tabs.update(tabs[0].id, { active: true }, function (tab) {
+				navigateToNodeChatCallback(tab, message_index);
+			});
+		} else {
+			// Open a new tab and handle navigation after the tab is created
+			chrome.tabs.create({ url: `${Constants.CHATGPT_ORIGIN}${node_id}` }, function (newTab) {
+				// Save the tab id and message index to navigate to after the tab is created
+				state.navigatedChat = { tabId: newTab.id, messageIndex: message_index };
+			});
+		}
+	});
+
+	// Minimize the React window
+	if (state.reactWindowId) {
+		chrome.windows.update(state.reactWindowId, { state: "minimized" });
+	}
+
+	return true;
+}
 
 /***** Messaging ******/
 
 // Send in format {action: ..., data: ...}
 // Receive in format {status: ..., data: ...}
-async function sendMessage(tabId, message_key, message_data=null) {
+async function sendMessage(tabId, message_key, message_data = null) {
 	const message = {
 		action: message_key,
 		data: message_data,
@@ -428,18 +486,20 @@ async function sendMessage(tabId, message_key, message_data=null) {
 // Receive in format {action: ..., node_data: ..., data: ...}
 // Respond in format {status: ..., data: ...}
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-	
-	console.log("Info on sender:" , sender);
-	var node_data = null;
-	if (sender.origin === Constants.CHATGPT_ORIGIN) {
-		node_data = message.node_data;
-	}
-	const data = message.data;
-
+	var node_data = null; // Node data from the content script
 	var response = {
+		// Response to send back to the content script
 		status: false,
 		data: null,
 	};
+
+	// Check if the message is from the ChatGPT origin, and get the node data if it is
+	if (sender.origin === Constants.CHATGPT_ORIGIN) {
+		node_data = message.node_data;
+	}
+
+	// Get the data from the message
+	const data = message.data;
 
 	switch (message.action) {
 		case Constants.UPDATE_NODE_MESSAGES:
@@ -492,14 +552,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 			});
 			break;
 		case Constants.HANDLE_OPEN_NODE_CHAT:
-			console.log("Received message to open chat for node", data.id);
-			// Open the chat for the node
-			const node_id = data.id;
-			const url = `${Constants.CHATGPT_ORIGIN}${node_id}`;
-			chrome.tabs.create({ url: url });
-
-			response.status = true;
-			sendResponse(response);
+			console.log("Received message to open chat for node", data.node_id);
+			handleOpenNodeChat(data.node_id, data.message_index).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
 			break;
 		default:
 			console.error("Unknown action:", message.action);
@@ -508,12 +565,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	return true;
 });
 
-
 /***** Background Notifications ******/
 async function notifyUser(action_type, invalid_action_message) {
-
 	const alert_message = `${action_type}: ${invalid_action_message}`;
-	
+
 	chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
 		sendMessage(tabs[0].id, Constants.ALERT, alert_message).then((response) => {
 			if (!response.status) {

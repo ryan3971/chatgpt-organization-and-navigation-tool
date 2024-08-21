@@ -305,6 +305,27 @@ async function getSelectedText() {
 	return response;
 }
 
+// Function to focus on an element based on data-testid attribute
+function focusChatMessageByTestId(message_index) {
+	message_index = message_index * 2; // Convert the message_id to the conversation-turn number
+	const element = document.querySelector(`[data-testid="conversation-turn-${message_index}"]`);
+	
+	console.log("Element:", element);
+	if (element) {
+		element.scrollIntoView({
+			behavior: 'smooth', // Enables the scrolling animation
+			block: 'center',    // Aligns the element to the center of the view
+			inline: 'nearest'   // Keeps horizontal alignment as close as possible
+		});
+		element.focus();
+	} else {
+		console.error("Element not found:", selector);
+	}
+}
+
+// Listener to check when page is loaded and navigate to specific chat message
+
+
 /************** Message Send/Receive Section **************/
 
 // Send in format {action: ..., node_data: ..., data: ...}
@@ -332,7 +353,8 @@ async function sendMessage(message_key, message_data) {
 // Receive in format {action: ..., data: ...}
 // Respond in format {status: ..., data: ...}
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-
+	console.log("Received message in content script");
+	var data;
 	var response = {
 		status: false,
 		data: null,
@@ -395,6 +417,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				sendMessage(Constants.UPDATE_NODE_MESSAGES, nodeMessages).then((response) => {
 					sendResponse(response);
 				});
+				break;
+			case Constants.SCROLL_TO_CHAT_MESSAGE:
+				console.log("Received message to scroll to chat message");
+				// Wait for a second before scrolling to the chat message to let chatGPT scrolling animation to end
+				setTimeout(() => {
+					response.status = focusChatMessageByTestId(request.data);
+					sendResponse(response);
+				}, 2000);
 				break;
 			case Constants.ALERT:
 				console.log("Received message to alert");

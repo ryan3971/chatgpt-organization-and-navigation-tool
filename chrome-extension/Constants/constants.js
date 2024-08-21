@@ -27,6 +27,7 @@ export const CONTENT_SCRIPT_CONSTANTS = "content_script_constants";
 export const UPDATE_CONTENT_SCRIPT_TEMP_DATA = "update_content_script_temp_data";
 export const HANDLE_NEW_BRANCH_CREATION = "handle_new_branch_creation";
 export const UPDATE_NODE_MESSAGES = "update_node_messages";
+export const SCROLL_TO_CHAT_MESSAGE = "scroll_to_chat_message";
 
 export const HANDLE_NODE_RENAMING = "handle_node_renaming";
 export const HANDLE_NODE_DELETION = "handle_node_deletion";

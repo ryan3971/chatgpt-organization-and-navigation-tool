@@ -15,11 +15,11 @@ const sampleData = {
 		branches: {
 			node_2: {
 				selectedText: "How are you?",
-				selectedTextContainerId: "0",
+				selectedTextContainerId: "1",
 			},
 			node_3: {
 				selectedText: "Weather today?",
-				selectedTextContainerId: "1",
+				selectedTextContainerId: "2",
 			},
 		},
 	},
@@ -36,7 +36,7 @@ const sampleData = {
 		branches: {
 			node_4: {
 				selectedText: "Tell me a joke",
-				selectedTextContainerId: "0",
+				selectedTextContainerId: "1",
 			},
 		},
 	},

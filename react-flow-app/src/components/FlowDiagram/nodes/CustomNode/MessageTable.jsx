@@ -3,13 +3,26 @@ import PropTypes from "prop-types";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Container, Row, Col, OverlayTrigger, Tooltip } from "react-bootstrap";
 
-const MessageTable = ({ messages }) => {
-	const handleButtonClick = (index, msg) => {
-		console.log(`User button clicked at index ${index}:`, msg.userMessage);
-	};
+import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
+import * as Constants from "../../../../util/constants";
 
-	const handleGptButtonClick = (index, msg) => {
-		console.log(`GPT button clicked at index ${index}:`, msg.gptMessage);
+const MessageTable = ({ node_id, messages }) => {
+	const handleButtonClick = (node_id, index) => {
+		console.log(`User button clicked at index ${index}:`);
+
+		const data = {
+			node_id: node_id,
+			message_index: index,
+		};
+
+		// send a message to the chrome background script to open a chat window
+		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data).then((response) => {
+			if (!response.status) {
+				console.error("Error sending message to background script");
+				return;
+			}
+			console.log("Message sent to background script");
+		});
 	};
 
 	const renderTooltip = (msg) => (
@@ -48,7 +61,7 @@ const MessageTable = ({ messages }) => {
 									backgroundColor: "#fff",
 									transition: "background-color 0.2s ease-in-out",
 								}}
-								onClick={() => handleButtonClick(index, msg)}
+								onClick={() => handleButtonClick(node_id, index)}
 								onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e6f3ff")}
 								onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
 							/>
@@ -78,7 +91,7 @@ const MessageTable = ({ messages }) => {
 									backgroundColor: "#fff",
 									transition: "background-color 0.2s ease-in-out",
 								}}
-								onClick={() => handleButtonClick(index, msg)}
+								onClick={() => handleButtonClick(node_id, index)}
 								onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f0f0f0")}
 								onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
 							/>
