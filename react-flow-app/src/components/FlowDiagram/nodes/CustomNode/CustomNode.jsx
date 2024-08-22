@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Card, Container, Row, Col } from "react-bootstrap";
 
@@ -11,6 +11,7 @@ import CustomHandle from "./CustomHandle";
 const CustomNode = ({ id, data }) => {
 	const { title, messages, branches, isParent } = data;
 	const totalColumns = messages.length; // Assuming each message corresponds to a column
+	const refs = useRef({});
 
 	return (
 		<Card
@@ -31,7 +32,7 @@ const CustomNode = ({ id, data }) => {
 				<Container fluid>
 					<Row className="justify-content-center">
 						{/* Message Table */}
-						<MessageTable node_id={id} messages={messages} />
+						<MessageTable node_id={id} messages={messages} refs={refs} />
 					</Row>
 				</Container>
 			</Card.Body>
@@ -54,12 +55,18 @@ const CustomNode = ({ id, data }) => {
 
 			{/* Handles for branches */}
 			{Object.keys(branches).map((key, index) => {
+				console.log("refs.current", refs.current);
 				const branch = branches[key];
+				const targetRef = refs.current[Number(branch.selectedTextContainerId)] || null;
+				console.log("CustomNode - Target Ref:", targetRef);
+				console.log("CustomNode - Branch:", branch);
+				console.log("CustomNode - Selected Text Container ID:", branch.selectedTextContainerId);
 				return (
 					<CustomHandle
+						node_id={id}
 						key={index}
 						branch={branch}
-						totalColumns={totalColumns}
+						targetRef={targetRef}
 					/>
 				);
 			})}

@@ -1,38 +1,45 @@
-import React from "react";
-import { Handle, Position } from "@xyflow/react";
+import React, { useEffect, useState } from "react";
+import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
-const CustomHandle = ({ branch, totalColumns }) => {
-	let selectedTextContainerId = branch.selectedTextContainerId || "0"; // Default to "0" if null
-	let handleStyle = {};
-	let position;
+const CustomHandle = ({ node_id, branch, targetRef }) => {
+	const updateNodeInternals = useUpdateNodeInternals();
+	const [positionStyle, setPositionStyle] = useState({});
 
-	if (selectedTextContainerId === "0") {
-		// Center the handle on the right side of the node
-		handleStyle = {
-			right: "0",
-			top: "50%",
-			transform: "translateY(-50%)", // Center the handle vertically
-		};
-		position = Position.Right;
-	} else {
-		const handlePosition = Number(selectedTextContainerId) - 1;
-		// Calculate the position based on the column the handle should be aligned with
-		handleStyle = {
-			left: `calc((100% / ${totalColumns}) * ${handlePosition} + (100% / ${totalColumns}) / 2 - 8px)`, // Align center of the handle to column
-			bottom: "0",
-		};
-		position = Position.Bottom;
-	}
+	useEffect(() => {
+		if (!targetRef) {
+			console.log("No target ref");
+			// cause where the branch message was overwritten; branch should align to the right
+			setPositionStyle({
+				left: "100%",
+				right: "0",
+				width: "16px",
+				height: "16px",
+			});
+		} else if (targetRef.current) {
+			console.log("Target Ref:", targetRef.current);
+			// Get the bounding box of the target (e.g., the button)
+			const targetRect = targetRef.current.getBoundingClientRect();
+			const parentRect = targetRef.current.offsetParent.getBoundingClientRect();
 
-	console.log("Selected Text Container ID in Custom Handle:", selectedTextContainerId);
+			// Calculate the handle position based on the target element's position
+			setPositionStyle({
+				left: `${targetRect.left - parentRect.left + targetRect.width / 2}px`, // Align center of handle
+				bottom: "0",
+				width: "16px",
+				height: "16px",
+			});
+		}
+		updateNodeInternals(node_id);
+	}, [targetRef, updateNodeInternals]);
 
+	
 	return (
 		<Handle
 			className="bg-dark rounded-circle"
-			style={handleStyle}
-			id={selectedTextContainerId}
+			style={positionStyle}
+			id={branch.selectedTextContainerId || "0"}
 			type="source"
-			position={position}
+			position={Position.Bottom}
 			isConnectable
 		/>
 	);

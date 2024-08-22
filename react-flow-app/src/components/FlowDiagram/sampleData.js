@@ -11,11 +11,27 @@ const sampleData = {
 				userMessage: "What is the weather like today?",
 				gptMessage: "The weather is sunny with a high of 25°C.",
 			},
+			{
+				userMessage: "What is the weather like today?",
+				gptMessage: "The weather is sunny with a high of 25°C.",
+			},
+			{
+				userMessage: "What is the weather like today?",
+				gptMessage: "The weather is sunny with a high of 25°C.",
+			},
+			{
+				userMessage: "What is the weather like today?",
+				gptMessage: "The weather is sunny with a high of 25°C.",
+			},
+			{
+				userMessage: "What is the weather like today?",
+				gptMessage: "The weather is sunny with a high of 25°C.",
+			},
 		],
 		branches: {
 			node_2: {
 				selectedText: "How are you?",
-				selectedTextContainerId: "1",
+				selectedTextContainerId: "0",
 			},
 			node_3: {
 				selectedText: "Weather today?",

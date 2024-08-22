@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import PropTypes from "prop-types";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Container, Row, Col, OverlayTrigger, Tooltip } from "react-bootstrap";
@@ -6,7 +6,21 @@ import { Button, Container, Row, Col, OverlayTrigger, Tooltip } from "react-boot
 import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
 import * as Constants from "../../../../util/constants";
 
-const MessageTable = ({ node_id, messages }) => {
+const MessageTable = ({ node_id, messages, refs }) => {
+	
+	useEffect(() => {
+		// Create references for each message button if not already created
+		messages.forEach((msg, index) => {
+			const containerIdKey = index + 1;	// adding one because 0 is reserved for the overwritten messages cases
+			if (!refs.current[containerIdKey]) {
+				refs.current[containerIdKey] = React.createRef();
+				console.log("Created ref for message button", containerIdKey);
+				console.log("Refs:", refs.current);
+			}
+		});
+	}, [messages, refs]);
+	
+	
 	const handleButtonClick = (node_id, index) => {
 		console.log(`User button clicked at index ${index}:`);
 
@@ -43,15 +57,16 @@ const MessageTable = ({ node_id, messages }) => {
 			<Row className="h-50">
 				{messages.map((msg, index) => (
 					<Col
+						className="p-1"
 						key={`user-${index}`}
 						xs="auto"
-						className="p-1"
 					>
 						<OverlayTrigger
 							placement="top"
 							overlay={renderTooltip(msg.userMessage)}
 						>
 							<Button
+								ref={refs.current[index + 1]} // assign the ref to each button
 								variant="outline-primary"
 								className="rounded-pill"
 								style={{
