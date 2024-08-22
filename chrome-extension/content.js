@@ -143,7 +143,7 @@ async function checkAndHandleElements(observer, mutation) {
 				if (nodeTitle !== renamedNodeData.node_title) {
 					console.log("Node title changed:", nodeTitle);
 					const nodeId = getIDfromHref([navPanelElement])[0];
-					const data = { node_id: nodeId, node_title: nodeTitle };
+					const data = { node_id: nodeId, new_title: nodeTitle };
 					// send the node id and new node title to the background script
 					sendMessage(Constants.HANDLE_NODE_RENAMING, data);
 				} else {

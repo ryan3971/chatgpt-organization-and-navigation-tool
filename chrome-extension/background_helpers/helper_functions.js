@@ -194,7 +194,7 @@ export async function updateNodeTitle(nodeId, newTitle) {
 				console.error("Nodes title not saved to storage");
 				return false;
 			}
-			console.log("Node title updated in storage");
+			console.log("Node title updated in storage:", newTitle);
 			return true;
 		}
     }
