@@ -1,4 +1,4 @@
-import { getFromStorage, setToStorage } from "../shared/services/chromeStorageService.js";
+import { getFromStorage, setToStorage, removeFromStorage } from "../shared/services/chromeStorageService.js";
 import * as Constants from "../Constants/constants.js";
 
 /****** General Functions ******/
@@ -203,6 +203,40 @@ export async function updateNodeTitle(nodeId, newTitle) {
     return true;    // might change
 }
 
+export async function deleteNodeSpace(nodeSpaceId) {
+
+    // delete the node space and remove it from the node spaces keys
+    const deletedNodeSpace = await removeFromStorage(nodeSpaceId);
+    if (!deletedNodeSpace) {
+        console.error("Node space not deleted");
+        return false;
+    }
+
+    // get the node spaces keys
+    const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+    if (!nodeSpacesKeys) {
+        console.error("Node spaces keys not found in storage");
+        return false;
+    }
+
+    // remove the node space key from the node spaces keys
+    const nodeSpacesKeysIndex = nodeSpacesKeys.indexOf(nodeSpaceId);
+    if (nodeSpacesKeysIndex > -1) {
+        nodeSpacesKeys.splice(nodeSpacesKeysIndex, 1);
+    } else {
+        console.error("Node space key not found in node spaces keys");
+        return false;
+    }
+
+    // save the new node spaces keys
+    const savedNodeSpacesKeys = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys );
+    if (!savedNodeSpacesKeys) {
+        console.error("Node spaces keys not saved to storage");
+        return false;
+    }
+    return true;
+}
+
 export async function deleteNode(node_id, nodes=null, level=0) {
     
     // we need to get the nodes from storage, check if the node is in the nodes, and recursively delete all branches of the node (and the branches of those nodes too) if it is found
@@ -224,6 +258,17 @@ export async function deleteNode(node_id, nodes=null, level=0) {
             }
 
             if (node_id in nodes) {
+                // Check if this node is the parent node; if it is, delete the node space
+                if (nodes[node_id].isParent) {
+                    // delete the node space
+                    const deletedNodeSpace = await deleteNodeSpace(nodeSpaceKey);
+                    if (!deletedNodeSpace) {
+                        console.error("Node space not deleted");
+                        return false;
+                    }
+                    console.log("Node space deleted");
+                    return true;
+                }
                 break;
             }
         }

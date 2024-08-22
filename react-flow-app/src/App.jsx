@@ -8,15 +8,17 @@ import SidePanel from "./components/NodeSpacePanel/SidePanel";
 import { sendMessageToBackground } from "./util/chromeMessagingService";
 import * as Constants from "./util/constants";
 
-const initialSpaceKeys = [1, 2, 3, 4, 5];
+import { Button } from "react-bootstrap";
 
-import gpt_image from "./assets/gpt_logo.png";
+// const initialSpaceKeys = [1, 2, 3, 4, 5];
 
-const initialNodeSpaces = [
-	{ id: 1, title: "Nodespace 1", imageUrl: gpt_image, infoText: "Info 1" },
-	{ id: 2, title: "Nodespace 2", imageUrl: gpt_image, infoText: "Info 2" },
-	{ id: 3, title: "Nodespace 3", imageUrl: gpt_image, infoText: "Info 3" },
-];
+// import gpt_image from "./assets/gpt_logo.png";
+
+// const initialNodeSpaces = [
+// 	{ id: 1, title: "Nodespace 1", imageUrl: gpt_image, infoText: "Info 1" },
+// 	{ id: 2, title: "Nodespace 2", imageUrl: gpt_image, infoText: "Info 2" },
+// 	{ id: 3, title: "Nodespace 3", imageUrl: gpt_image, infoText: "Info 3" },
+// ];
 
 
 const App = () => {
@@ -52,15 +54,29 @@ const App = () => {
 	return (
 		<ReactFlowProvider>
 			{!isPanelOpen && (
-				<button
+				<Button
+					variant="light"
+					className="shadow-sm border border-light position-fixed m-3 rounded"
+					style={{
+						left: "10px",
+						top: "10px",
+						zIndex: "10",
+						padding: "8px 16px",
+						fontWeight: "500",
+						fontSize: "0.9rem",
+						color: "#495057",
+						backgroundColor: "#f8f9fa",
+						transition: "background-color 0.2s ease-in-out",
+					}}
 					onClick={togglePanel}
-					className="m-5 p-5 fixed left-0 top-0 h-5 w-10 bg-blue-500 text-white rounded-lg focus:outline-none hover:bg-blue-600 transition-colors z-10"
+					onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e2e6ea")}
+					onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#f8f9fa")}
 				>
 					{isPanelOpen ? "Close Panel" : "Open Panel"}
-				</button>
+				</Button>
 			)}
 			<Flow
-				className="h-screen w-screen z-1"
+				className="h-screen w-screen"
 				nodeSpaces={nodeSpaces}
 				activeSpace={activeSpace}
 				handleUpdateNodeSpaces={handleUpdateNodeSpaces}

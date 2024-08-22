@@ -112,6 +112,14 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 
 /***** Context Menu Setup ******/
 chrome.runtime.onInstalled.addListener(() => {
+	
+	chrome.contextMenus.create({
+		id: Constants.CONTEXT_MENU_OPEN_GUI,
+		title: "Open GUI",
+		contexts: ["all"], // makes it so the button only appears when text is selected
+		enabled: true,
+	});
+
 	chrome.contextMenus.create({
 		id: Constants.CONTEXT_MENU_CREATE_BRANCH_NODE,
 		title: "Create Branch Node",
@@ -134,8 +142,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 function handleContextMenuClick(info, tab) {
 	console.log("Chrome context menu item clicked");
-
-	if (info.menuItemId === Constants.CONTEXT_MENU_CREATE_PARENT_NODE) {
+	if (info.menuItemId === Constants.CONTEXT_MENU_OPEN_GUI) {
+		openOverviewWindow();
+	} else if (info.menuItemId === Constants.CONTEXT_MENU_CREATE_PARENT_NODE) {
 		createParentNode(info, tab);
 	} else if (info.menuItemId === Constants.CONTEXT_MENU_CREATE_BRANCH_NODE) {
 		startNewBranchChat(info, tab);
@@ -164,9 +173,7 @@ function openOverviewWindow() {
 		{
 			url: "index.html",
 			type: "popup",
-			width: 1200,
-			height: 1200,
-			focused: true,
+			state: "maximized",
 		},
 		function (window) {
 			state.reactWindowId = window.id;

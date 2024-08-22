@@ -29,3 +29,14 @@ export async function setToStorage(data_key, data) {
 		return false;
 	}
 }
+
+export async function removeFromStorage(key) {
+	try {
+		const response = await chrome.storage.sync.remove(key);
+		console.log("Removed from storage in removeFromStorage");
+		return true;
+	} catch (error) {
+		console.error("Error removing from storage in removeFromStorage", error);
+		return false;
+	}
+}

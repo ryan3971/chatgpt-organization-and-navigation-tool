@@ -52,6 +52,8 @@ export const VALID_TEXT_SELECTED = "valid_text_selected";
 export const CONTEXT_MENU_CREATE_PARENT_NODE = "create_parent_node";
 export const CONTEXT_MENU_CREATE_BRANCH_NODE = "create_branch_node";
 export const CONTEXT_MENU_RESET = "reset";
+export const CONTEXT_MENU_OPEN_GUI = "open_gui";
+
 
 /****** Chat Type ******/
 export const NODE_TYPE_NEW = "new_node";
