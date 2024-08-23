@@ -7,7 +7,7 @@ import * as Constants from "../../../../util/constants";
 
 import { showToast } from '../../../toast/toastService'; // Ensure the correct path to your toast function
 
-const MessageTable = ({ node_id, messages, refs, con }) => {
+const MessageTable = ({ node_id, messages, refs }) => {
 	const [showTooltip, setShowTooltip] = useState({});
 	const tooltipTimeout = useRef(null);
 	
