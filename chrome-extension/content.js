@@ -308,7 +308,7 @@ async function getSelectedText() {
 			// Extract the number from the conversation-turn attribute
 			var selectedTextContainerId = dataTestId.match(/(\d+)/)[0]
 			console.log("Selected text container id:", selectedTextContainerId);
-			selectedTextContainerId = (selectedTextContainerId % 2);// divide by two to account for the messages being paired
+			selectedTextContainerId = String(Math.floor(selectedTextContainerId / 2));// divide by two to account for the messages being paired
 
 			// return the selected text and the data-testid value
 			response.flag = Constants.VALID_TEXT_SELECTION;

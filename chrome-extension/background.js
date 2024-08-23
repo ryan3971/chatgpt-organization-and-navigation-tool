@@ -322,26 +322,6 @@ async function createBranchChat(node_data, data, tab_id) {
 		return false;
 	}
 
-	// // Creating a new chat object to send to the content script
-	// var new_chat_data = {
-	// 	chat_type: null,
-	// 	node_space_id: null,
-	// 	node_id: null,
-	// 	selected_text_data: null,
-	// };
-
-	// // Send the chat data back to the content script
-	// new_chat_data.chat_type = Constants.CHAT_TYPE_EXISTING_CHAT;
-	// new_chat_data.node_space_id = node_space_id;
-	// new_chat_data.node_id = branch_node_id;
-
-	// // Send the chat data back to the content script
-	// response = await sendMessage(tab_id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, new_chat_data);
-	// if (!response.status) {
-	// 	notifyUser(Constants.ERROR, "Error updating the new branch chat data");
-	// 	return false;
-	// }
-
 	console.log("Branch Node Created");
 
 	return true;

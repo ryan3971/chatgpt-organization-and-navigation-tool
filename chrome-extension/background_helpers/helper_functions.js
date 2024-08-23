@@ -100,8 +100,9 @@ export async function createNewNodeBranch(node_space_id, parent_node_id, selecte
     // update the parent node with the new branch data
     const branchData = {
 		selectedText: selected_text_data.selectedText,
-		selectedTextContainerId: String(selected_text_data.selectedTextContainerId),    // convert to string
+		selectedTextContainerId: selected_text_data.selectedTextContainerId,    // convert to string
 	};
+    console.log("Selected text container id - helper - create branch:", selected_text_data.selectedTextContainerId);
     parentNode.branches[branch_node_id] = branchData;
     spaceNodes[parent_node_id] = parentNode;
 
@@ -150,7 +151,8 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
     for (const branch_id in node.branches) {
         let selectedTextContainerId = node.branches[branch_id].selectedTextContainerId;
         selectedTextContainerId = Number(selectedTextContainerId) - 1;  // convert back to number, subtract 1 to account for containers beginning at 1
-
+        console.log("Selected text container id - helper:", selectedTextContainerId);
+        console.log("Messages length - helper:", messagesLength);
         if (selectedTextContainerId > messagesLength) {
             // set the selected text container id to be null
             node.branches[branch_id].selectedTextContainerId = null;

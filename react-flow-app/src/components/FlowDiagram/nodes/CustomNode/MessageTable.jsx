@@ -54,7 +54,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 			className="border border-light bg-white shadow-sm rounded"
 			style={{ padding: "15px" }}
 		>
-			<Row className="h-50">
+			<Row className="h-50  flex-nowrap">
 				{messages.map((msg, index) => (
 					<Col
 						className="p-1"
@@ -85,7 +85,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 				))}
 			</Row>
 
-			<Row className="h-50 mt-3">
+			<Row className="h-50 mt-3  flex-nowrap">
 				{messages.map((msg, index) => (
 					<Col
 						key={`gpt-${index}`}

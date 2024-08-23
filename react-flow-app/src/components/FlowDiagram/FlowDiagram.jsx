@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import "@xyflow/react/dist/style.css";
 
 import CustomNode from "./nodes/CustomNode/CustomNode";
+import CustomEdge from "./edges/CustomEdge/CustomEdge";
 import { transformStorageData } from "../../util/transformData";
 
 import sampleData from "./sampleData";
@@ -19,6 +20,10 @@ import useLayout from "../../hooks/useLayout";
 
 const nodeTypes = {
 	"custom-node": CustomNode,
+};
+
+const edgeTypes = {
+	"custom-edge": CustomEdge,
 };
 
 //const { nodesData, edgesData } = transformStorageData(sampleData);
@@ -112,6 +117,7 @@ const Flow = ({ nodeSpaces, activeSpace, handleUpdateNodeSpaces }) => {
 				nodeTypes={nodeTypes}
 				onNodesChange={onNodesChange}
 				edges={edges}
+				edgeTypes={edgeTypes}
 				onEdgesChange={onEdgesChange}
 				onNodeContextMenu={onNodeContextMenu}
 				onPaneClick={onPaneClick}
