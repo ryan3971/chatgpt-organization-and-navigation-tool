@@ -5,13 +5,15 @@ import { Button, Container, Row, Col, OverlayTrigger, Tooltip } from "react-boot
 import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
 import * as Constants from "../../../../util/constants";
 
+import { showToast } from '../../../toast/toastService'; // Ensure the correct path to your toast function
+
 const MessageTable = ({ node_id, messages, refs }) => {
 	const [showUserTooltip, setShowUserTooltip] = useState({});
 	const [showGptTooltip, setShowGptTooltip] = useState({});
 	const tooltipTimeout = useRef(null);
 	
 	useEffect(() => {
-		const handleBlur = () => {
+		const handleWindowBlur = () => {
 			// If the document is hidden (e.g., window minimized or tab switched)
 			if (document.hidden) {
 				// Hide all tooltips when the document becomes hidden
@@ -22,11 +24,11 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		};
 
 		// Listen for visibility changes
-		window.addEventListener("blur", handleBlur);
+		window.addEventListener("blur", handleWindowBlur);
 
 		// Cleanup the event listener when the component unmounts
 		return () => {
-			window.removeEventListener("blur", handleBlur);
+			window.removeEventListener("blur", handleWindowBlur);
 		};
 	}, []);
 
@@ -37,7 +39,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		// Show the tooltip after a small delay
 		tooltipTimeout.current = setTimeout(() => {
 			setShowTooltip((prev) => ({ ...prev, [index]: true }));
-		}, 200); // Adding a small delay to prevent flickering when quickly hovering over items
+		}, 400); // Adding a small delay to prevent flickering when quickly hovering over items
 	};
 
 	const handleMouseLeave = (event, index, setShowTooltip) => {
@@ -71,7 +73,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		// send a message to the chrome background script to open a chat window
 		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data).then((response) => {
 			if (!response.status) {
-				console.error("Error sending message to background script");
+				showToast("Error opening chat", { type: "error" });
 				return;
 			}
 			console.log("Message sent to background script");

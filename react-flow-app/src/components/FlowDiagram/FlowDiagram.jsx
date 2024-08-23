@@ -18,6 +18,8 @@ import { sendMessageToBackground } from "../../util/chromeMessagingService";
 import "@xyflow/react/dist/style.css";
 import useLayout from "../../hooks/useLayout";
 
+import { showToast } from '../toast/toastService'; // Ensure the correct path to your toast function
+
 const nodeTypes = {
 	"custom-node": CustomNode,
 };
@@ -44,53 +46,53 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 	}, [setNodes, setEdges]);
 
 	// useEffect to get the node data from the Chrome storage using the activeSpace key
-	// useEffect(() => {
-	// 	if (!activeSpace) {return;}
-	// 	console.log("Getting node data for space", activeSpace);
-	// 	sendMessageToBackground(Constants.GET_NODE_SPACE_DATA, { space_id: activeSpace }).then((response) => {
-	// 		if (!response.status) {
-	// 			console.error("Error retrieving node data");
-	// 			return;
-	// 		}
+	useEffect(() => {
+		if (!activeSpace) {return;}
+		console.log("Getting node data for space", activeSpace);
+		sendMessageToBackground(Constants.GET_NODE_SPACE_DATA, { space_id: activeSpace }).then((response) => {
+			if (!response.status) {
+				showToast("Error retrieving node data", { type: "error" });
+				return;
+			}
 
-	// 		const { nodesData, edgesData } = transformStorageData(response.data);
+			const { nodesData, edgesData } = transformStorageData(response.data);
 
-	// 		setNodes(nodesData);
-	// 		setEdges(edgesData);
-	// 	});
-	// }, [activeSpace, setNodes, setEdges]);
+			setNodes(nodesData);
+			setEdges(edgesData);
+		});
+	}, [activeSpace, setNodes, setEdges]);
 
-	// // useEffect to sync with the Chrome storage
-	// useEffect(() => {
-	// 	function handleStorageChange(changes, namespace) {
-	// 		for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-	// 			console.log(`Storage key "${key}" in namespace "${namespace}" changed.`, `Old value was "${oldValue}", new value is "${newValue}".`);
-	// 			console.log(newValue);
+	// useEffect to sync with the Chrome storage
+	useEffect(() => {
+		function handleStorageChange(changes, namespace) {
+			for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+				console.log(`Storage key "${key}" in namespace "${namespace}" changed.`, `Old value was "${oldValue}", new value is "${newValue}".`);
+				console.log(newValue);
 
-	// 			switch (key) {
-	// 				case Constants.NODE_SPACES_KEY:
-	// 					handleUpdateNodeSpaces(newValue);
-	// 					break;
-	// 				case activeSpace: {
-	// 					const { nodesData, edgesData } = transformStorageData(newValue);
-	// 					setNodes(nodesData);
-	// 					setEdges(edgesData);
-	// 					break;
-	// 				}
-	// 				default:
-	// 					console.log("Change to storage does not impact current render");
-	// 					break;
-	// 			}
-	// 		}
-	// 	}
-	// 	// Add the listener when the component mounts
-	// 	chrome.storage.onChanged.addListener(handleStorageChange);
+				switch (key) {
+					case Constants.NODE_SPACES_KEY:
+						handleUpdateNodeSpaces(newValue);
+						break;
+					case activeSpace: {
+						const { nodesData, edgesData } = transformStorageData(newValue);
+						setNodes(nodesData);
+						setEdges(edgesData);
+						break;
+					}
+					default:
+						console.log("Change to storage does not impact current render");
+						break;
+				}
+			}
+		}
+		// Add the listener when the component mounts
+		chrome.storage.onChanged.addListener(handleStorageChange);
 
-	// 	// Remove the listener when the component unmounts
-	// 	return () => {
-	// 		chrome.storage.onChanged.removeListener(handleStorageChange);
-	// 	};
-	// }, [activeSpace, handleUpdateNodeSpaces, setNodes, setEdges]);
+		// Remove the listener when the component unmounts
+		return () => {
+			chrome.storage.onChanged.removeListener(handleStorageChange);
+		};
+	}, [activeSpace, handleUpdateNodeSpaces, setNodes, setEdges]);
 
 	// Listen for changes in Chrome storage
 

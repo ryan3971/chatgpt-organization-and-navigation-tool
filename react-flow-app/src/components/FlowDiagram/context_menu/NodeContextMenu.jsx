@@ -3,6 +3,9 @@ import "./NodeContextMenu.css";
 import * as Constants from "../../../util/constants";
 import { sendMessageToBackground } from "../../../util/chromeMessagingService";
 
+import { showToast } from '../../toast/toastService'; // Ensure the correct path to your toast function
+
+
 export default function NodeContextMenu({ id, top, left, right, bottom, onCloseContextMenu, ...props }) {
 	const menuRef = useRef(null); // Reference to the context menu element
 
@@ -20,7 +23,7 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 
 		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data).then((response) => {
 			if (!response.status) {
-				console.error("Error sending message to background script");
+				showToast("Error opening chat", { type: "error" });
 				return;
 			}
 		});
