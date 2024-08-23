@@ -331,7 +331,7 @@ async function getSelectedText() {
 
 // Function to focus on an element based on data-testid attribute
 function focusChatMessageByTestId(message_index) {
-	message_index = message_index * 2; // Convert the message_id to the conversation-turn number
+	message_index = (message_index + 1) * 2; // Convert the message_id to the conversation-turn number)
 	const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(message_index) + HTML_GENERIC_CLOSING;
 	const element = document.querySelector(containerId);
 	
