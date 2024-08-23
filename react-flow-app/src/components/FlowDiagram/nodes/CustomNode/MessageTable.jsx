@@ -1,5 +1,4 @@
-import React, { useEffect } from "react";
-import PropTypes from "prop-types";
+import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Container, Row, Col, OverlayTrigger, Tooltip } from "react-bootstrap";
 
@@ -7,7 +6,50 @@ import { sendMessageToBackground } from "../../../../util/chromeMessagingService
 import * as Constants from "../../../../util/constants";
 
 const MessageTable = ({ node_id, messages, refs }) => {
+	const [showUserTooltip, setShowUserTooltip] = useState({});
+	const [showGptTooltip, setShowGptTooltip] = useState({});
+	const tooltipTimeout = useRef(null);
 	
+	useEffect(() => {
+		const handleBlur = () => {
+			console.log("Document visibility changed is hidden", document.hidden);
+			// If the document is hidden (e.g., window minimized or tab switched)
+			if (document.hidden) {
+				// Hide all tooltips when the document becomes hidden
+				setShowUserTooltip({});
+				setShowGptTooltip({});
+				clearTimeout(tooltipTimeout.current);
+			}
+		};
+
+		// Listen for visibility changes
+		window.addEventListener("blur", handleBlur);
+
+		// Cleanup the event listener when the component unmounts
+		return () => {
+			window.removeEventListener("blur", handleBlur);
+		};
+	}, []);
+
+	const handleMouseEnter = (event, index, setShowTooltip) => {
+		// Set the background color of the button to a light blue when hovered
+		event.currentTarget.style.backgroundColor = "#e6f3ff";
+
+		// Show the tooltip after a small delay
+		tooltipTimeout.current = setTimeout(() => {
+			setShowTooltip((prev) => ({ ...prev, [index]: true }));
+		}, 200); // Adding a small delay to prevent flickering when quickly hovering over items
+	};
+
+	const handleMouseLeave = (event, index, setShowTooltip) => {
+		// Set the background color of the button back to white when not hovered
+		event.currentTarget.style.backgroundColor = "#fff";
+
+		// Hide the tooltip
+		clearTimeout(tooltipTimeout.current);
+		setShowTooltip((prev) => ({ ...prev, [index]: false }));
+	};
+
 	useEffect(() => {
 		// Create references for each message button if not already created
 		messages.forEach((msg, index) => {
@@ -42,7 +84,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 	const renderTooltip = (msg) => (
 		<Tooltip
 			id="button-tooltip"
-			style={{ maxWidth: "200px", opacity: 0.65 }}
+			style={{ maxWidth: "200px", opacity: 0.85 }}
 		>
 			{msg}
 		</Tooltip>
@@ -63,6 +105,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 					>
 						<OverlayTrigger
 							placement="top"
+							show={showUserTooltip[index]}
 							overlay={renderTooltip(msg.userMessage)}
 						>
 							<Button
@@ -77,8 +120,8 @@ const MessageTable = ({ node_id, messages, refs }) => {
 									transition: "background-color 0.2s ease-in-out",
 								}}
 								onClick={() => handleButtonClick(node_id, index)}
-								onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e6f3ff")}
-								onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
+								onMouseEnter={(e) => handleMouseEnter(e, index, setShowUserTooltip)}
+								onMouseLeave={(e) => handleMouseLeave(e, index, setShowUserTooltip)}
 							/>
 						</OverlayTrigger>
 					</Col>
@@ -94,6 +137,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 					>
 						<OverlayTrigger
 							placement="top"
+							show={showGptTooltip[index]}
 							overlay={renderTooltip(msg.gptMessage)}
 						>
 							<Button
@@ -107,8 +151,8 @@ const MessageTable = ({ node_id, messages, refs }) => {
 									transition: "background-color 0.2s ease-in-out",
 								}}
 								onClick={() => handleButtonClick(node_id, index)}
-								onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f0f0f0")}
-								onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
+								onMouseEnter={(e) => handleMouseEnter(e, index, setShowGptTooltip)}
+								onMouseLeave={(e) => handleMouseLeave(e, index, setShowGptTooltip)}
 							/>
 						</OverlayTrigger>
 					</Col>
@@ -116,15 +160,6 @@ const MessageTable = ({ node_id, messages, refs }) => {
 			</Row>
 		</Container>
 	);
-};
-
-MessageTable.propTypes = {
-	messages: PropTypes.arrayOf(
-		PropTypes.shape({
-			userMessage: PropTypes.string.isRequired,
-			gptMessage: PropTypes.string.isRequired,
-		})
-	).isRequired,
 };
 
 export default MessageTable;

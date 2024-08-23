@@ -1,4 +1,4 @@
-import { BaseEdge, EdgeLabelRenderer, getStraightPath, useReactFlow, getBezierPath, EdgeText } from "@xyflow/react";
+import { BaseEdge, getBezierPath, EdgeText } from "@xyflow/react";
 
 export default function CustomEdge({ id, sourceX, sourceY, targetX, targetY, data }) {
 	const [edgePath, labelX, labelY] = getBezierPath({

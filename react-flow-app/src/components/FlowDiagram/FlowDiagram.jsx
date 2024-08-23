@@ -26,9 +26,7 @@ const edgeTypes = {
 	"custom-edge": CustomEdge,
 };
 
-//const { nodesData, edgesData } = transformStorageData(sampleData);
-
-const Flow = ({ nodeSpaces, activeSpace, handleUpdateNodeSpaces }) => {
+const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 	const [nodes, setNodes, onNodesChange] = useNodesState([]);
 	const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 	const ref = useRef(null);

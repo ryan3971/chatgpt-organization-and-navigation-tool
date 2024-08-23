@@ -1,8 +1,7 @@
 import PanelNodeSpace from "./PanelNodeSpace";
 
-import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Button, ListGroup, Offcanvas } from "react-bootstrap";
+import { ListGroup, Offcanvas } from "react-bootstrap";
 
 import gpt_image from "../../assets/gpt_logo.png";
 

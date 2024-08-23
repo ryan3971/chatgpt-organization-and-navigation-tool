@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
 const CustomHandle = ({ node_id, branch, targetRef }) => {
@@ -30,7 +30,7 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 			});
 		}
 		updateNodeInternals(node_id);
-	}, [targetRef, updateNodeInternals]);
+	}, [targetRef, node_id, updateNodeInternals]);
 
 	
 	return (

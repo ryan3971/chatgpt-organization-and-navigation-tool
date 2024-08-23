@@ -1,6 +1,6 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Card, Container, Row, Col } from "react-bootstrap";
+import { Card, Container, Row } from "react-bootstrap";
 
 import { Handle, Position } from "@xyflow/react";
 
@@ -10,7 +10,6 @@ import CustomHandle from "./CustomHandle";
 
 const CustomNode = ({ id, data }) => {
 	const { title, messages, branches, isParent } = data;
-	const totalColumns = messages.length; // Assuming each message corresponds to a column
 	const refs = useRef({});
 
 	return (

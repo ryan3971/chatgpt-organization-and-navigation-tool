@@ -1,4 +1,3 @@
-import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Card, Image } from "react-bootstrap";
 import gptLogo from "./gpt_logo.png";
