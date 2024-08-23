@@ -76,7 +76,6 @@ const App = () => {
 				</Button>
 			)}
 			<Flow
-				className="h-screen w-screen"
 				activeSpace={activeSpace}
 				handleUpdateNodeSpaces={handleUpdateNodeSpaces}
 			/>

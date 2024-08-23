@@ -222,11 +222,6 @@ async function createNewBranchNode(navPanel) {
 // Function to extract conversation text and save it
 function getNodeMessages() {
 	let nodeMessages = []; // Reset the array
-	var turnNodes = {};
-
-	const userMessageKey = Constants.NODES_MESSAGES_USER_MESSAGE_KEY;
-	const gptMessageKey = Constants.NODES_MESSAGES_GPT_MESSAGE_KEY;
-
 	let turnNumber = 2; // Start with 2
 
 	while (true) {
@@ -243,14 +238,8 @@ function getNodeMessages() {
 		// Extract the text and trim it to the first 100 characters
 		const text = dataMessageId.textContent.trim().substring(0, 100);
 
-		// Store the data based on whether the turn number is even or odd
-		if (turnNumber % 2 === 0) {
-			turnNodes[userMessageKey] = text;
-		} else {
-			turnNodes[gptMessageKey] = text;
-			nodeMessages.push(turnNodes);
-			turnNodes = {};
-		}
+		// Store the data
+		nodeMessages.push(text);
 
 		turnNumber++; // Move to the next conversation turn
 	}
@@ -308,7 +297,7 @@ async function getSelectedText() {
 			// Extract the number from the conversation-turn attribute
 			var selectedTextContainerId = dataTestId.match(/(\d+)/)[0]
 			console.log("Selected text container id:", selectedTextContainerId);
-			selectedTextContainerId = String(Math.floor(selectedTextContainerId / 2));// divide by two to account for the messages being paired
+			selectedTextContainerId = String(selectedTextContainerId - 2); // subtract 2 to normalize it
 
 			// return the selected text and the data-testid value
 			response.flag = Constants.VALID_TEXT_SELECTION;
@@ -331,8 +320,8 @@ async function getSelectedText() {
 
 // Function to focus on an element based on data-testid attribute
 function focusChatMessageByTestId(message_index) {
-	message_index = (message_index + 1) * 2; // Convert the message_id to the conversation-turn number)
-	const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(message_index) + HTML_GENERIC_CLOSING;
+	// remember to convert the message_id back to the conversation-turn number
+	const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(message_index + 2) + HTML_GENERIC_CLOSING;
 	const element = document.querySelector(containerId);
 	
 	console.log("Element:", element);

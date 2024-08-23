@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Button, Container, Row, Col, OverlayTrigger, Tooltip } from "react-bootstrap";
+import { Button, Container, Row, Col, Overlay, Tooltip } from "react-bootstrap";
 
 import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
 import * as Constants from "../../../../util/constants";
 
 import { showToast } from '../../../toast/toastService'; // Ensure the correct path to your toast function
 
-const MessageTable = ({ node_id, messages, refs }) => {
-	const [showUserTooltip, setShowUserTooltip] = useState({});
-	const [showGptTooltip, setShowGptTooltip] = useState({});
+const MessageTable = ({ node_id, messages, refs, con }) => {
+	const [showTooltip, setShowTooltip] = useState({});
 	const tooltipTimeout = useRef(null);
 	
 	useEffect(() => {
@@ -17,8 +16,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 			// If the document is hidden (e.g., window minimized or tab switched)
 			if (document.hidden) {
 				// Hide all tooltips when the document becomes hidden
-				setShowUserTooltip({});
-				setShowGptTooltip({});
+				setShowTooltip({});
 				clearTimeout(tooltipTimeout.current);
 			}
 		};
@@ -32,17 +30,19 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		};
 	}, []);
 
-	const handleMouseEnter = (event, index, setShowTooltip) => {
+	const handleMouseEnter = (event, index) => {
 		// Set the background color of the button to a light blue when hovered
 		event.currentTarget.style.backgroundColor = "#e6f3ff";
+
+		showToast("Click to open chat", { type: "error" });
 
 		// Show the tooltip after a small delay
 		tooltipTimeout.current = setTimeout(() => {
 			setShowTooltip((prev) => ({ ...prev, [index]: true }));
-		}, 400); // Adding a small delay to prevent flickering when quickly hovering over items
+		}, 200); // Adding a small delay to prevent flickering when quickly hovering over items
 	};
 
-	const handleMouseLeave = (event, index, setShowTooltip) => {
+	const handleMouseLeave = (event, index) => {
 		// Set the background color of the button back to white when not hovered
 		event.currentTarget.style.backgroundColor = "#fff";
 
@@ -54,9 +54,8 @@ const MessageTable = ({ node_id, messages, refs }) => {
 	useEffect(() => {
 		// Create references for each message button if not already created
 		messages.forEach((msg, index) => {
-			const containerIdKey = index + 1;	// adding one because 0 is reserved for the overwritten messages cases
-			if (!refs.current[containerIdKey]) {
-				refs.current[containerIdKey] = React.createRef();
+			if (!refs.current[index]) {
+				refs.current[index] = React.createRef();
 			}
 		});
 	}, [messages, refs]);
@@ -95,67 +94,86 @@ const MessageTable = ({ node_id, messages, refs }) => {
 			className="border border-light bg-white shadow-sm rounded"
 			style={{ padding: "15px" }}
 		>
-			<Row className="h-50  flex-nowrap">
-				{messages.map((msg, index) => (
-					<Col
-						className="p-1"
-						key={`user-${index}`}
-						xs="auto"
-					>
-						<OverlayTrigger
-							placement="top"
-							show={showUserTooltip[index]}
-							overlay={renderTooltip(msg.userMessage)}
-						>
-							<Button
-								ref={refs.current[index + 1]} // assign the ref to each button
-								variant="outline-primary"
-								className="rounded-pill"
-								style={{
-									width: "35px",
-									height: "35px",
-									border: "1px solid #b3b3b3",
-									backgroundColor: "#fff",
-									transition: "background-color 0.2s ease-in-out",
-								}}
-								onClick={() => handleButtonClick(node_id, index)}
-								onMouseEnter={(e) => handleMouseEnter(e, index, setShowUserTooltip)}
-								onMouseLeave={(e) => handleMouseLeave(e, index, setShowUserTooltip)}
-							/>
-						</OverlayTrigger>
-					</Col>
-				))}
+			<Row className="h-50 flex-nowrap">
+				{messages.map((msg, index) => {
+					if (index % 2 === 0) { 
+						// User messages (even indices)
+						return (
+							<Col
+								key={`user-${index}`}
+								xs="auto"
+								className="p-1"
+							>
+								<Button
+									ref={refs.current[index]}
+									variant="outline-primary"
+									className="rounded-pill"
+									style={{
+										width: "35px",
+										height: "35px",
+										border: "1px solid #b3b3b3",
+										backgroundColor: "#fff",
+										transition: "background-color 0.2s ease-in-out",
+									}}
+									onClick={() => handleButtonClick(node_id, index)}
+									onMouseEnter={(e) => handleMouseEnter(e, index)}
+									onMouseLeave={(e) => handleMouseLeave(e, index)}
+								/>
+								{refs.current[index] && refs.current[index].current && (
+									<Overlay
+										target={refs.current[index].current}
+										show={showTooltip[index]}
+										placement="top"
+									>
+										{renderTooltip(msg)}
+									</Overlay>
+								)}
+							</Col>
+						);
+					}
+					return null;
+				})}
 			</Row>
 
-			<Row className="h-50 mt-3  flex-nowrap">
-				{messages.map((msg, index) => (
-					<Col
-						key={`gpt-${index}`}
-						xs="auto"
-						className="p-1"
-					>
-						<OverlayTrigger
-							placement="top"
-							show={showGptTooltip[index]}
-							overlay={renderTooltip(msg.gptMessage)}
-						>
-							<Button
-								variant="outline-secondary"
-								className="rounded-pill"
-								style={{
-									width: "35px",
-									height: "35px",
-									border: "1px solid #b3b3b3",
-									backgroundColor: "#fff",
-									transition: "background-color 0.2s ease-in-out",
-								}}
-								onClick={() => handleButtonClick(node_id, index)}
-								onMouseEnter={(e) => handleMouseEnter(e, index, setShowGptTooltip)}
-								onMouseLeave={(e) => handleMouseLeave(e, index, setShowGptTooltip)}
-							/>
-						</OverlayTrigger>
-					</Col>
-				))}
+			<Row className="h-50 mt-3 flex-nowrap">
+				{messages.map((msg, index) => {
+					if (index % 2 !== 0) {
+						// GPT messages (odd indices)
+						return (
+							<Col
+								key={`gpt-${index}`}
+								xs="auto"
+								className="p-1"
+							>
+								<Button
+									ref={refs.current[index]}
+									variant="outline-secondary"
+									className="rounded-pill"
+									style={{
+										width: "35px",
+										height: "35px",
+										border: "1px solid #b3b3b3",
+										backgroundColor: "#fff",
+										transition: "background-color 0.2s ease-in-out",
+									}}
+									onClick={() => handleButtonClick(node_id, index)}
+									onMouseEnter={(e) => handleMouseEnter(e, index)}
+									onMouseLeave={(e) => handleMouseLeave(e, index)}
+								/>
+								{refs.current[index] && refs.current[index].current && (
+									<Overlay
+										target={refs.current[index].current}
+										show={showTooltip[index]}
+										placement="top"
+									>
+										{renderTooltip(msg)}
+									</Overlay>
+								)}
+							</Col>
+						);
+					}
+					return null;
+				})}
 			</Row>
 		</Container>
 	);
