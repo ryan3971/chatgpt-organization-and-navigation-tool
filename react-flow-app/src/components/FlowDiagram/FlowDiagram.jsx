@@ -39,10 +39,10 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 
 	const onInit = useCallback(() => {
 		// Update the diagram with the new data
-		const { nodesData, edgesData } = transformStorageData(sampleData);
+		// const { nodesData, edgesData } = transformStorageData(sampleData);
 
-		setNodes(nodesData);
-		setEdges(edgesData);
+		// setNodes(nodesData);
+		// setEdges(edgesData);
 	}, [setNodes, setEdges]);
 
 	// useEffect to get the node data from the Chrome storage using the activeSpace key
@@ -102,9 +102,7 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 			setEdges(layout.edges);
 
 			window.requestAnimationFrame(() => {
-				fitView().then((response) => {
-					console.log("Fit view response", response);
-				});
+				fitView({ padding: 0.2, maxZoom: 3 });
 			});
 		}
 	}, [layout, fitView, setNodes, setEdges]);
