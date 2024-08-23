@@ -23,7 +23,7 @@ export const useNodeContextMenu = (ref, initialState = null) => {
 	);
 
 	// Close the context menu if it's open whenever the window is clicked.
-	const onPaneClick = useCallback(() => setMenu(null), [setMenu]);
+	const onCloseContextMenu = useCallback(() => setMenu(null), [setMenu]);
 
-	return [menu, { onNodeContextMenu, onPaneClick }];
+	return [menu, { onNodeContextMenu, onCloseContextMenu }];
 };

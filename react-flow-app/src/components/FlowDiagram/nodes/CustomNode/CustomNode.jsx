@@ -54,12 +54,8 @@ const CustomNode = ({ id, data }) => {
 
 			{/* Handles for branches */}
 			{Object.keys(branches).map((key, index) => {
-				console.log("refs.current", refs.current);
 				const branch = branches[key];
 				const targetRef = refs.current[Number(branch.selectedTextContainerId)] || null;
-				console.log("CustomNode - Target Ref:", targetRef);
-				console.log("CustomNode - Branch:", branch);
-				console.log("CustomNode - Selected Text Container ID:", branch.selectedTextContainerId);
 				return (
 					<CustomHandle
 						node_id={id}

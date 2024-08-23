@@ -12,7 +12,6 @@ const MessageTable = ({ node_id, messages, refs }) => {
 	
 	useEffect(() => {
 		const handleBlur = () => {
-			console.log("Document visibility changed is hidden", document.hidden);
 			// If the document is hidden (e.g., window minimized or tab switched)
 			if (document.hidden) {
 				// Hide all tooltips when the document becomes hidden
@@ -56,8 +55,6 @@ const MessageTable = ({ node_id, messages, refs }) => {
 			const containerIdKey = index + 1;	// adding one because 0 is reserved for the overwritten messages cases
 			if (!refs.current[containerIdKey]) {
 				refs.current[containerIdKey] = React.createRef();
-				console.log("Created ref for message button", containerIdKey);
-				console.log("Refs:", refs.current);
 			}
 		});
 	}, [messages, refs]);

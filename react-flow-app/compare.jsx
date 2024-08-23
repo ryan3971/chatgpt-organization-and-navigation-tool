@@ -1,17 +1,14 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import "./NodeContextMenu.css";
 import * as Constants from "../../../util/constants";
 import { sendMessageToBackground } from "../../../util/chromeMessagingService";
 
-export default function NodeContextMenu({ id, top, left, right, bottom, onCloseContextMenu, ...props }) {
+export default function NodeContextMenu({ id, top, left, right, bottom, onClose, ...props }) {
 	const menuRef = useRef(null); // Reference to the context menu element
 
-	// send a message to chrome passing the id to the node when button is clicked
+	// Function to handle opening chat for a node
 	const handleOpenChat = () => {
 		console.log("Opening chat for node", id);
-
-		// close the context menu first
-		onCloseContextMenu();
 
 		const data = {
 			node_id: id,
@@ -30,18 +27,18 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 		// Function to close the context menu when a click is detected outside
 		const handleOutsideClick = (e) => {
 			if (menuRef.current && !menuRef.current.contains(e.target)) {
-				onCloseContextMenu(); // Close the menu if the click is outside the menu
+				onClose(); // Close the menu if the click is outside the menu
 			}
 		};
 
 		// Listen for mousedown events
-		window.addEventListener("mousedown", handleOutsideClick, true);
+		document.addEventListener("mousedown", handleOutsideClick);
 
 		// Cleanup the event listener on component unmount
 		return () => {
-			document.removeEventListener("mousedown", handleOutsideClick, true);
+			document.removeEventListener("mousedown", handleOutsideClick);
 		};
-	}, [onCloseContextMenu]);
+	}, [onClose]);
 
 	return (
 		<div

@@ -7,7 +7,6 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 
 	useEffect(() => {
 		if (!targetRef) {
-			console.log("No target ref");
 			// cause where the branch message was overwritten; branch should align to the right
 			setPositionStyle({
 				left: "100%",
@@ -16,7 +15,6 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 				height: "16px",
 			});
 		} else if (targetRef.current) {
-			console.log("Target Ref:", targetRef.current);
 			// Get the bounding box of the target (e.g., the button)
 			const targetRect = targetRef.current.getBoundingClientRect();
 			const parentRect = targetRef.current.offsetParent.getBoundingClientRect();
