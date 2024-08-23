@@ -1,4 +1,4 @@
-export async function sendMessage(action) {
+export async function sendMessageToBackground(action) {
 	try {
 		const response = await chrome.runtime.sendMessage(action);
 		console.log("Response from background script in sendMessage: ", response);

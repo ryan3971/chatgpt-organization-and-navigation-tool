@@ -1,8 +1,14 @@
 {
 	"manifest_version": 3,
-	"name": "Your Extension Name",
+	"name": "ChatGPT Navigator",
 	"version": "1.0",
-	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus", "webNavigation"],
+	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus", "webNavigation", "notifications"],
+	"icons": {
+		"16": "gpt_logo.png",
+		"32": "gpt_logo.png",
+		"48": "gpt_logo.png",
+		"128": "gpt_logo.png"
+	},
 	"background": {
 		"service_worker": "background.js",
 		"type": "module"
@@ -14,14 +20,19 @@
 		}
 	],
 
-	"action": {},
+	"action": {
+		"default_icon": {
+			"16": "gpt_logo.png",
+			"32": "gpt_logo.png",
+			"48": "gpt_logo.png",
+			"128": "gpt_logo.png"
+		}
+	},
 
 	"web_accessible_resources": [
 		{
-			"resources": [
-				"assets/*"
-			],
-			"matches": ["<all_urls>"]
+			"resources": ["assets/*"],
+			"matches": ["https://chatgpt.com/*"]
 		}
 	]
 }

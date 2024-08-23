@@ -1,324 +1,547 @@
-import { getFromStorage, setToStorage } from "./shared/services/chromeStorageService.js";
-import { sendMessageToTab } from "./shared/services/communicationService.js";
+import {
+	doesNodeExist,
+	createNewNodeParent,
+	updateNodeMessages,
+	createNewNodeBranch,
+	updateNodeTitle,
+	deleteNode,
+	getNodeSpaces,
+	getNodeSpaceData,
+} from "./background_helpers/helper_functions.js";
+import * as Constants from "./Constants/constants.js";
 
-/* CONSTANT DEFINITIONS */
-// const TEST_NEW_NODE = [
-// 	{
-// 		node_parent_id: "",
-// 		node_branch_id: "test_is",
-// 		node_parent_title: "text",
-// 		edge_selected_text: "sample_title",
-// 	},
-// ];
-
-// const TEST_NODES = [
-// 	{
-// 		node_id: "1",
-// 		node_type: "default",
-// 		node_position: { x: 250, y: 5 },
-// 		node_data: {
-// 			node_data_title: "Node 1",
-// 		},
-// 	},
-// ];
-
-const CHATGPT_ORIGIN = "https://chatgpt.com"
-const CHATGPT_HOSTNAME = "chatgpt.com";
-
+/**
+ * To account for multiple tabs, I need one state objects in background that will persist on tab changes
+ * And info specific to a tab stored in the content script
+ */
 
 // Variable used for state management
 let state = {
-	hasNewNode: false,
-	lastActiveChatId: null,
-	overviewWindowId: null,
+	isNewBranchNode: false,
+	reactWindowId: null,
+	navigatedChat : {tabId: null, messageIndex: null},
 };
 
-chrome.runtime.onInstalled.addListener(() => {
+// store data to pass onto a newly created branch node
+let branchParentData = {
+	node_space_id: null,
+	parent_node_id: null,
+	selected_text_data: null,
+};
 
+// Listen for tab updates
+chrome.tabs.onUpdated.addListener(handleTabUpdate);
+async function handleTabUpdate(tabId, changeInfo, tab) {
+	console.log("Tab updated:", tab.status);
+	if (changeInfo.status !== "complete") return; // Wait for the page to load completely
+	console.log("Tab fully loaded");
+
+	let response;
+	// New webpage open, is it ChatGPT?
+	const url = new URL(tab.url);
+	const hostname = url.hostname; // e.g., chatgpt.com
+
+	if (hostname !== Constants.CHATGPT_HOSTNAME) return; // Not ChatGPT
+
+	// We need to send the Constants to the content script
+	response = await sendMessage(tabId, Constants.CONTENT_SCRIPT_CONSTANTS, Constants);
+	if (!response.status) {
+		console.error("Error sending constants to content script");
+		return;
+	}
+
+	// Check the Node URL
+	const nodeId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
+	var message = {
+		node_type: null,
+		node_space_id: null,
+		node_id: null,
+		selected_text_data: null,
+	};
+
+	if (nodeId === "/") {
+		if (state.isNewBranchNode) {
+			// New branch node
+			console.warn("New branch node");
+			state.isNewBranchNode = false;
+			message.node_type = Constants.NODE_TYPE_NEW_BRANCH;
+			message.node_space_id = branchParentData.node_space_id;
+			message.node_id = branchParentData.parent_node_id;
+			message.selected_text_data = branchParentData.selected_text_data;
+			branchParentData = {}; // Reset the branch parent data
+		} else {
+			// New node
+			console.warn("New node");
+			message.node_type = Constants.NODE_TYPE_NEW;
+		}
+	} else {
+		// Existing node
+		response = await doesNodeExist(nodeId);
+		if (!response) {
+			// Node does not exist
+			console.warn("Node does not exist");
+			message.node_type = Constants.NODE_TYPE_UNKNOWN;
+		} else {
+			// Node exists
+			console.warn("Node exists");
+			message.node_type = Constants.NODE_TYPE_EXISTING;
+			const { node_space_id, node_id } = response;
+			message.node_space_id = node_space_id;
+			message.node_id = node_id;
+		}
+	}
+
+	// Send the node data to the content script
+	response = await sendMessage(tabId, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, message);
+	if (!response.status) {
+		console.error("Error updating content script temp data");
+		return;
+	}
+
+	// if this is a chat navigated to from the react app, scroll to the message index
+	if (state.navigatedChat.tabId === tabId) {
+		console.log("Navigating to message index:", state.navigatedChat.messageIndex);
+		sendMessage(tab.id, Constants.SCROLL_TO_CHAT_MESSAGE, state.navigatedChat.messageIndex).then((response) => {
+			if (!response.status) {
+				console.error("Error sending message to scroll to message index. ");
+			}
+		});
+		state.navigatedChat = { tabId: null, messageIndex: null }; // Reset the navigated chat
+	}
+}
+
+/***** Context Menu Setup ******/
+chrome.runtime.onInstalled.addListener(() => {
+	
 	chrome.contextMenus.create({
-		id: "saveHighlightedText",
-		title: "Save Highlighted Text",
-		contexts: ["selection"], // makes it so the button only appears when text is selected
-		enabled: false,
+		id: Constants.CONTEXT_MENU_OPEN_GUI,
+		title: "Open GUI",
+		contexts: ["all"], // makes it so the button only appears when text is selected
+		enabled: true,
 	});
 
 	chrome.contextMenus.create({
-		id: "createParentNode",
+		id: Constants.CONTEXT_MENU_CREATE_BRANCH_NODE,
+		title: "Create Branch Node",
+		contexts: ["selection"], // makes it so the button only appears when text is selected
+		enabled: true,
+	});
+	chrome.contextMenus.create({
+		id: Constants.CONTEXT_MENU_CREATE_PARENT_NODE,
 		title: "Make Parent Node",
+		contexts: ["all"],
+	});
+	chrome.contextMenus.create({
+		id: Constants.CONTEXT_MENU_RESET,
+		title: "Reset",
 		contexts: ["all"],
 	});
 });
 
-async function createParentNode(info, tab) {
-	console.log("Setting Parent Node")
-	
-	let titleText = "",
-		response;
-	const url = new URL(info.pageUrl);
-
-	//const hostname = url.hostname; // e.g., https://chatgpt.com
-	const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-
-	if (chatId === "/") {
-		console.warn("URL is a new chat. Cannot make parent yet: ", url);
-		return;
-	}
-
-	try {
-		response = await sendMessageToTab(tab.id, { action: "extractTitle" });
-		titleText = response.title;
-	} catch (error) {
-		console.error("Error extracting title from the page: ", error);
-	}
-
-	// Format the data as specified
-	const newParentNode = {
-		node_parent_id: chatId,
-		node_parent_title: titleText,
-	};
-
-	// Save the newParentNode to storage
-	response = await setToStorage({ new_parent_node: newParentNode });
-	console.log("Data saved to storage: ", response);
-}
-
-async function saveHighlightedText(info, tab) {
-	console.log("Saving Highlighted Text");
-	
-	let titleText = "", response;
-	const selectedText = info.selectionText;
-	const url = new URL(info.pageUrl);
-
-	//const hostname = url.hostname; // e.g., chatgpt.com
-	const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-
-	try {
-		response = await sendMessageToTab(tab.id, { action: "extractTitle" });
-		titleText = response.title;
-	} catch (error) {
-		console.error("Error extracting title from the page: ", error);
-	}
-
-	console.log("Selected text:", selectedText);
-	console.log("Pathname:", chatId);
-
-	// Format the data as specified
-	const new_node = {
-		node_parent_id: chatId,
-		node_branch_id: "",
-		node_parent_title: titleText,
-		edge_selected_text: selectedText,
-	};
-
-	// temporary code to test the storage (reset the storage)
-	//await setToStorage({ new_nodes: TEST_NEW_NODE });
-	//await setToStorage({ nodes: TEST_NODES });
-
-	// Retrieve the newNodes from storage
-	const { new_nodes: newNodesStor } = await getFromStorage("new_nodes");
-	console.log("Data retrieved from storage (this may be empty, that is fine):", newNodesStor);
-
-	const updatedNewNodesStor = newNodesStor ? [...newNodesStor, new_node] : [new_node];
-
-	// Save the newNode to storage
-	response = await setToStorage({ new_nodes: updatedNewNodesStor });
-	console.log("Data saved to storage:", response);
-
-	// Set the state to indicate a new node has been created
-	state.hasNewNode = true;
-
-	// Open a new ChatGPT chat in the current tab
-	const newUrl = "https://chatgpt.com/"; //chatgpt_hostname;
-
-	//Query the active tab
-	chrome.tabs.update(tab.id, { url: newUrl });
-	console.log("Opened new ChatGPT chat in the current tab: ", newUrl);
-}
-
+// Handle the context menu click
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
-
-async function handleContextMenuClick(info, tab) {
+function handleContextMenuClick(info, tab) {
 	console.log("Chrome context menu item clicked");
-
-	if (info.menuItemId === "createParentNode") {
-		chrome.storage.sync.clear();
+	if (info.menuItemId === Constants.CONTEXT_MENU_OPEN_GUI) {
+		openOverviewWindow();
+	} else if (info.menuItemId === Constants.CONTEXT_MENU_CREATE_PARENT_NODE) {
 		createParentNode(info, tab);
-	} else if (info.menuItemId === "saveHighlightedText") {
-		saveHighlightedText(info, tab);
+	} else if (info.menuItemId === Constants.CONTEXT_MENU_CREATE_BRANCH_NODE) {
+		startNewBranchChat(info, tab);
+	} else if (info.menuItemId === Constants.CONTEXT_MENU_RESET) {
+		// Temporary code to reset the storage
+		chrome.storage.sync.clear();
 	} else {
 		console.error("Unknown context menu item clicked:", info.menuItemId);
 	}
 }
 
-chrome.tabs.onUpdated.addListener(handleTabUpdate);
-
-async function handleTabUpdate(tabId, changeInfo, tab) {
-	// Check if the tab has hostname CHATGPT_HOSTNAME. If it does, save the tab info so we can manipulate it later
-	const url = new URL(tab.url);
-	const hostname = url.hostname; // e.g., chatgpt.com
-
-	if (hostname === CHATGPT_HOSTNAME) {
-		state.lastActiveChatId = tab.id;
-		console.log("Last active ChatGPT tab ID Saved:", state.lastActiveChatId);
-	}
-
-	if (changeInfo.url && state.hasNewNode) {
-		const url = new URL(changeInfo.url);
-
-		const hostname = url.hostname; // e.g., chatgpt.com
-		const chatId = url.pathname; // e.g., /c/f226cd80-a0bd-44f5-9a74-68baa556b80c
-
-		// check if hostname is chatgpt and chat_id is empty
-		if (hostname === CHATGPT_HOSTNAME && chatId === "/") {
-			console.log("URL is a new ChatGPT page: ", url);
-			return;
-		}
-		// Either we have new chat that is a branch or we have navigated to a new page
-		state.hasNewNode = false;
-
-		const { new_nodes: newNodesStor } = await getFromStorage("new_nodes");
-
-		let response = await sendMessageToTab(tab.id, { action: "extractTitle" });
-		const titleText = response.title;
-
-		// Check the following:
-		// 1) if the URL is a ChatGPT conversation page
-		// 2) the url has an id (meaning the chat page has been used)
-		// 3) The chat title is "ChatGPT"
-		if (hostname === CHATGPT_HOSTNAME && chatId.startsWith("/c/") && titleText === "ChatGPT") {
-			// We have a new chat that is a branch.
-			console.log("URL is a ChatGPT conversation page: ", url);
-
-			// search the new_nodes_stor for an element with an empty branch_id and return the element index
-			const index = newNodesStor.findIndex((node) => !node.node_branch_id);
-
-			if (index != -1) {
-				newNodesStor[index].node_branch_id = chatId;
-				console.log("Updated newNode: ", newNodesStor[index].node_branch_id);
-
-				let response = await setToStorage({ new_nodes: newNodesStor });
-				console.log("Node branch ID updated to storage: ", response);
-			} else {
-				// No newNode with an empty branch_id found
-				console.warn("No newNode with an empty branch_id found. This should not happen...");
-			}
-		} else {
-			// We have navigated to a new page or chat; remove the newNode element with an empty branch_id from storage
-			const updated_new_nodes_stor = newNodesStor.filter((node) => node.node_branch_id); // Remove the newNode with an empty branch_id (check if truthy)
-
-			let response = await setToStorage({ new_nodes: updated_new_nodes_stor });
-			console.log("New Node branch removed from storage: ", response);
-		}
-	}
-}
-
-
-// Function to message the react application, if the window is open
-
-
-
+/*****React Application Handlers ******/
 chrome.action.onClicked.addListener(openOverviewWindow);
 
-chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
-
 function openOverviewWindow() {
-
 	// Check if the window already exists
-	if (state.overviewWindowId) {
-		chrome.windows.update(state.overviewWindowId, { focused: true });
-		return;
+	if (state.reactWindowId) {
+		console.log("React window already exists. Focusing on it.");
+		chrome.windows.update(state.reactWindowId, { focused: true });
+		return true;
 	}
 
 	console.log("Action button clicked. Opening window.");
 
-	chrome.windows.create({
-		url: "index.html",
-		type: "popup",
-		width: 800,
-		height: 600,
-		focused: true,
-	}, function(window) {
-  		state.overviewWindowId = window.id;
+	chrome.windows.create(
+		{
+			url: "index.html",
+			type: "popup",
+			state: "maximized",
+		},
+		function (window) {
+			state.reactWindowId = window.id;
+		}
+	);
+}
+
+// Handle the closing of the React window
+chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
+function handleOverviewWindowClose(windowId) {
+	if (windowId === state.reactWindowId) {
+		state.reactWindowId = null;
+		console.log("React window was closed.");
+	}
+}
+
+/***** Event Handlers ******/
+
+async function createParentNode(info, tab) {
+	console.log("Setting Parent Node");
+
+	var node_data = {};
+	var response;
+
+	// Get the node information from the content script
+	response = await sendMessage(tab.id, Constants.GET_NODE_DATA);
+	if (!response.status) {
+		notifyUser(Constants.ERROR, "Error getting chat data");
+		return;
+	}
+	node_data = response.data;
+	const node_type = node_data.node_type;
+
+	// is this node a branch?
+	if (node_type !== Constants.NODE_TYPE_UNKNOWN) {
+		notifyUser(Constants.WARNING, "Node is not a new chat. Cannot make into parent");
+		return;
+	}
+
+	// Get the node id and node title
+	const url = new URL(info.pageUrl);
+	const node_id = url.pathname;
+
+	response = await sendMessage(tab.id, Constants.GET_NODE_TITLE);
+	const node_title = response.data;
+
+	// Create new node
+	const node_space_id = await createNewNodeParent(node_id, node_title);
+	if (!node_space_id) {
+		notifyUser(Constants.ERROR, "Error creating new node");
+		return;
+	}
+
+	// Send the node data back to the content script
+	node_data.node_type = Constants.NODE_TYPE_EXISTING;
+	node_data.node_space_id = node_space_id;
+	node_data.node_id = node_id;
+
+	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, node_data);
+	if (!response.status) {
+		notifyUser(Constants.ERROR, "Error updating the parent node data");
+		return;
+	}
+
+	// send message to get the messages from the chat
+	response = await sendMessage(tab.id, Constants.UPDATE_NODE_MESSAGES);
+	if (!response.status) {
+		notifyUser(Constants.ERROR, "Error getting node data");
+		return;
+	}
+
+	console.log("Parent Node Created");
+}
+
+async function startNewBranchChat(info, tab) {
+	var response;
+	// Get the node information from the content script
+	response = await sendMessage(tab.id, Constants.GET_NODE_DATA);
+	if (!response.status) {
+		notifyUser(Constants.ERROR, "Error getting node data");
+		return;
+	}
+	const node_data = response.data;
+
+	// Check what type of node it is
+	if (node_data.node_type === Constants.NODE_TYPE_UNKNOWN) {
+		notifyUser(Constants.WARNING, "URL is not a known node. Cannot create branch from it");
+		return;
+	} else if (node_data.node_type === Constants.NODE_TYPE_NEW) {
+		notifyUser(Constants.WARNING, "URL is a new node. Cannot create branch from it");
+		return;
+	}
+
+	// Get the selected text from the context menu
+	response = await sendMessage(tab.id, Constants.GET_SELECTED_TEXT);
+	if (!response.status) {
+		switch (response.data) {
+			case Constants.NO_TEXT_SELECTED:
+				notifyUser(Constants.ERROR, "No text selected");
+				break;
+			case Constants.MAX_TEXT_SELECTION_LENGTH_EXCEEDED:
+				notifyUser(Constants.ERROR, "Exceeded text selection limit");
+				break;
+			case Constants.TEXT_SPANS_MULTIPLE_MESSAGES:
+				notifyUser(Constants.ERROR, "Text spans multiple messages");
+				break;
+			case Constants.INVALID_TEXT_SELECTED:
+				notifyUser(Constants.ERROR, "Invalid text selected");
+				break;
+			default:
+				notifyUser(Constants.ERROR, "Unknown error");
+		}
+		return;
+	}
+
+	// selected text is valid; get the selected text and the selected text container id
+	const { selectedText, selectedTextContainerId } = response.data;
+
+	branchParentData = {
+		node_space_id: node_data.node_space_id,
+		parent_node_id: node_data.node_id,
+		selected_text_data: { selectedText, selectedTextContainerId },
+	};
+
+	// Set the state to indicate a new branch node has been created
+	state.isNewBranchNode = true;
+
+	// Open a new ChatGPT node in the current tab
+	notifyUser(Constants.INFO, "New branch node started");
+	chrome.tabs.update(tab.id, { url: Constants.CHATGPT_ORIGIN });
+}
+
+async function createBranchChat(node_data, data, tab_id) {
+	var response;
+	// Create a new node object and associated objects
+	const node_space_id = node_data.node_space_id;
+	const parent_node_id = node_data.node_id;
+	const selected_text_data = node_data.selected_text_data;
+
+	const branch_node_id = data.node_id;
+	const branch_node_title = data.node_title;
+
+	response = await createNewNodeBranch(node_space_id, parent_node_id, selected_text_data, branch_node_id, branch_node_title);
+	if (!response) {
+		notifyUser(Constants.ERROR, "Error creating new branch node");
+		return false;
+	}
+
+	console.log("Branch Node Created");
+
+	return true;
+}
+
+async function updateChatMessages(node_data, node_messages) {
+	var response;
+	const node_space_id = node_data.node_space_id;
+	const node_id = node_data.node_id;
+	const node_type = node_data.node_type;
+
+	if (node_type === Constants.NODE_TYPE_EXISTING) {
+		// Update the node messages
+		response = await updateNodeMessages(node_space_id, node_id, node_messages);
+		if (!response) {
+			notifyUser(Constants.ERROR, "Error updating node messages");
+			return false;
+		}
+	} else {
+		console.error("Unknown node type:", node_type);
+		return false;
+	}
+	return true;
+}
+
+async function updateChatTitle(data) {
+	var response;
+	const node_id = data.node_id;
+	const new_title = data.new_title;
+
+	response = await updateNodeTitle(node_id, new_title);
+
+	if (!response) {
+		notifyUser(Constants.ERROR, "Error updating node title");
+		return false;
+	}
+	return true;
+}
+
+async function deleteChat(data) {
+	var response;
+	const node_id = data.node_id;
+
+	response = await deleteNode(node_id);
+
+	if (!response) {
+		notifyUser(Constants.ERROR, "Error deleting node");
+		return false;
+	}
+	return true;
+}
+
+async function getNodeSpaceKeys() {
+	// Get the node space keys
+	const node_space_keys = await getNodeSpaces();
+	return node_space_keys;
+}
+
+async function getNodeSpace(space_id) {
+	// Get the node space data
+	const node_space_data = await getNodeSpaceData(space_id);
+	return node_space_data;
+}
+
+function navigateToNodeChatCallback(tab, message_index) {
+
+	// focus on the tab
+	chrome.windows.update(tab.windowId, { focused: true });
+
+	const tab_id = tab.id;
+
+	// Check if a message_index was provided
+	if (!message_index) return;
+	console.log("Sending message to content script to navigate to message index:", message_index);
+
+	// Send a message to the content script to scroll to the message index
+	sendMessage(tab_id, Constants.SCROLL_TO_CHAT_MESSAGE, message_index).then((response) => {
+		if (!response.status) {
+			console.error("Error sending message to scroll to message index");
+		}
 	});
 }
 
-function handleOverviewWindowClose(windowId) {
-	if (windowId === state.overviewWindowId) {
-		state.overviewWindowId = null;
-		console.log("Overview window was closed.");
+async function handleOpenNodeChat(node_id, message_index) {
+	// Check if there is a tab with the node id in the URL open already
+	chrome.tabs.query({ url: `${Constants.CHATGPT_ORIGIN}${node_id}` }, function (tabs) {
+		console.log("Tabs with the node id in the URL:", tabs);
+		if (tabs.length > 0) {
+			// Update the tab and handle navigation after the tab is updated (set it to active)
+			chrome.tabs.update(tabs[0].id, { active: true }, function (tab) {
+				navigateToNodeChatCallback(tab, message_index);
+			});
+		} else {
+			// Open a new tab and handle navigation after the tab is created
+			chrome.tabs.create({ url: `${Constants.CHATGPT_ORIGIN}${node_id}` }, function (newTab) {
+				// Save the tab id and message index to navigate to after the tab is created
+				state.navigatedChat = { tabId: newTab.id, messageIndex: message_index };
+			});
+		}
+	});
+
+	// Minimize the React window
+	if (state.reactWindowId) {
+		chrome.windows.update(state.reactWindowId, { state: "minimized" });
+	}
+
+	return true;
+}
+
+/***** Messaging ******/
+
+// Send in format {action: ..., data: ...}
+// Receive in format {status: ..., data: ...}
+async function sendMessage(tabId, message_key, message_data = null) {
+	const message = {
+		action: message_key,
+		data: message_data,
+	};
+
+	try {
+		const response = await chrome.tabs.sendMessage(tabId, message);
+		console.log("Response from content script in sendMessage: ", response.status);
+		return response;
+	} catch (error) {
+		console.error("Error sending message in sendMessage:", error);
+		return null;
 	}
 }
 
-/*
-Note: Keeping .catch for each promise to make debugging easier.
-	  Might change it from throwing an error to just a warning
-*/
+// Receive in format {action: ..., node_data: ..., data: ...}
+// Respond in format {status: ..., data: ...}
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-	if (message.action === "updateContextMenu") {
-		chrome.contextMenus.update("saveHighlightedText", {enabled: message.enabled,})
-			.then(() => {
-				sendResponse({ success: true });
-			}).catch((error) => {
-				console.error("Error updating context menu: ", error);
-				sendResponse({ success: false });
-			});
+	var node_data = null; // Node data from the content script
+	var response = {
+		// Response to send back to the content script
+		status: false,
+		data: null,
+	};
 
-	} else if (message.action === "updateDiagram")	{
-		chrome.tabs.get(state.lastActiveChatId)
-			.then((tab) => {
-				if (!tab) {
-					console.error("Error getting tab: ", chrome.runtime.lastError.message);
-				}
-				console.log("Last active chat tab found");
-
-				const response = sendMessageToTab(tab.id, { action: "getPanelData" })
-				return response;
-			})
-			.then((response) => {
-				if (!response) {
-					console.error("Error getting panel data: ", chrome.runtime.lastError.message);
-				}
-				console.log("Response from getPanelData: ", response);
-				sendResponse({ success: true });
-			})
-			.catch((error) => {
-				console.error("Error updating diagram: ", error);
-				sendResponse({ success: false });
-			});
-	} else if (message.action === "openChat") 		{
-		const chatId = message.nodeId;
-		const chatUrl = `${CHATGPT_ORIGIN}${chatId}`
-		// Launch in the last active chatGPT tab or create a new tab
-		if (state.lastActiveChatId) {
-			chrome.tabs.update(state.lastActiveChatId, { url: chatUrl });
-		} else {
-			chrome.tabs.create({ url: chatUrl });
-		}
-		sendResponse({ success: true });
-
-	} else if (message.action === "getFromStorage") {
-		chrome.storage.sync.get(message.key)
-			.then((result) => {
-				console.log("Data retrieved from storage: ", result[message.key]);
-				sendResponse({ success: true, data: result[message.key] });
-			}).catch((error) => {
-				console.error("Error getting from storage: ", error);
-				sendResponse({ success: false });
-		});
-	} else if (message.action === "setToStorage") {
-		const data = { [message.key]: message.value };
-		console.log("Data saved to storage: ", data);
-		chrome.storage.sync.set(data)
-		.then(() => {
-			sendResponse({ success: true });
-		}).catch((error) => {
-			console.error("Error setting to storage: ", error);
-			sendResponse({ success: false });
-		});
-	} else {
-		console.error("Unknown storage action: ", message.action);
-		sendResponse({ success: false });
+	// Check if the message is from the ChatGPT origin, and get the node data if it is
+	if (sender.origin === Constants.CHATGPT_ORIGIN) {
+		node_data = message.node_data;
 	}
 
-	return true; // Keeps the message channel open for sendResponse
+	// Get the data from the message
+	const data = message.data;
+
+	switch (message.action) {
+		case Constants.UPDATE_NODE_MESSAGES:
+			console.log("Received message to update node messages");
+			updateChatMessages(node_data, data).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
+			break;
+		case Constants.HANDLE_NEW_BRANCH_CREATION:
+			console.log("Received message to handle new branch creation");
+			const tab_id = sender.tab.id;
+			createBranchChat(node_data, data, tab_id).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
+			break;
+		case Constants.HANDLE_NODE_RENAMING:
+			console.log("Received message to update node title");
+			updateChatTitle(data).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
+			break;
+		case Constants.HANDLE_NODE_DELETION:
+			console.log("Received message to delete node");
+			deleteChat(data).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
+			break;
+		case Constants.REACT_APP_MOUNTED:
+			console.log("Received message that React application mounted");
+			getNodeSpaceKeys().then((node_space_keys) => {
+				if (node_space_keys) {
+					response.status = true;
+					response.data = node_space_keys;
+				}
+				sendResponse(response);
+			});
+			break;
+		case Constants.GET_NODE_SPACE_DATA:
+			console.log("Received message from React application to get node space data");
+			getNodeSpace(data.space_id).then((node_space_data) => {
+				if (node_space_data) {
+					response.status = true;
+					response.data = node_space_data;
+				}
+				sendResponse(response);
+			});
+			break;
+		case Constants.HANDLE_OPEN_NODE_CHAT:
+			console.log("Received message to open chat for node", data.node_id);
+			handleOpenNodeChat(data.node_id, data.message_index).then((status) => {
+				response.status = status;
+				sendResponse(response);
+			});
+			break;
+		default:
+			console.error("Unknown action:", message.action);
+			sendResponse(response);
+	}
+	return true;
 });
+
+/***** Background Notifications ******/
+async function notifyUser(action_type, invalid_action_message) {
+	const alert_message = `${action_type}: ${invalid_action_message}`;
+
+	chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+		sendMessage(tabs[0].id, Constants.ALERT, alert_message).then((response) => {
+			if (!response.status) {
+				console.error("Error sending alert message");
+			}
+		});
+	});
+}
