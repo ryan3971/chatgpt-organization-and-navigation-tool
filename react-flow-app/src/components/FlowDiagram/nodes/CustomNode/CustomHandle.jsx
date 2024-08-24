@@ -21,7 +21,7 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 
 			// Calculate the handle position based on the target element's position
 			setPositionStyle({
-				left: `${targetRect.left - parentRect.left + targetRect.width / 2}px`, // Align center of handle
+				left: `${parentRect.left + targetRect.width / 2}px`, // Align center of handle
 				bottom: "0",
 				width: "16px",
 				height: "16px",

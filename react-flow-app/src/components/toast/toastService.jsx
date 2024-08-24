@@ -45,6 +45,7 @@ export function showToast(message, variant = "info") {
 
 	// Automatically remove the toast after it autohides
 	setTimeout(() => {
+		if (!toastRoot) return; // Exit if the root is already null
 		toastRoot.unmount(); // Unmount the toast
 		toastRoot = null; // Reset toastRoot to allow creating a new root for the next toast
 	}, TOAST_TIMEOUT); // Match this to the autohide delay

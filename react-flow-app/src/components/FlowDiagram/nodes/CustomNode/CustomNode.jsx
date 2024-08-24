@@ -14,24 +14,26 @@ const CustomNode = ({ id, data }) => {
 
 	return (
 		<Card
-			className="border-light shadow-sm rounded-lg"
-			style={{ minWidth: "12rem", padding: "10px", backgroundColor: "#f4f4f9", position: "relative" }}
+			className="bg-gray-50 border border-gray-200 shadow-sm rounded-lg w-min-[12rem]"
+			onDoubleClick={() => console.log("Double clicked node", id)}
 		>
 			<Card.Header
-				className="text-center p-2"
-				style={{ backgroundColor: "#fff", borderBottom: "none", fontWeight: "600" }}
+				className="bg-gray-100 p-2 rounded-t-md"
 			>
 				<Title title={title} />
 			</Card.Header>
 
 			<Card.Body
-				className="d-flex justify-content-center align-items-center"
-				style={{ padding: "10px" }}
+				className="d-flex justify-content-center align-items-center p-2"
 			>
 				<Container fluid>
 					<Row className="justify-content-center">
 						{/* Message Table */}
-						<MessageTable node_id={id} messages={messages} refs={refs} />
+						<MessageTable
+							node_id={id}
+							messages={messages}
+							refs={refs}
+						/>
 					</Row>
 				</Container>
 			</Card.Body>

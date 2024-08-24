@@ -29,7 +29,7 @@ const sampleData = {
 	},
 
 	node_2: {
-		title: "Chat Title 2",
+		title: "Chat Title 2 4356456 456456 45364356 435564356",
 		isParent: false,
 		messages: ["Tell me a joke.", "Why don't skeletons fight each other? They don't have the guts."],
 		branches: {

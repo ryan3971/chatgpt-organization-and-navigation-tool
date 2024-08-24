@@ -5,12 +5,12 @@ import { Button, Container, Row, Col, Overlay, Tooltip } from "react-bootstrap";
 import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
 import * as Constants from "../../../../util/constants";
 
-import { showToast } from '../../../toast/toastService'; // Ensure the correct path to your toast function
+import { showToast } from "../../../toast/toastService"; // Ensure the correct path to your toast function
 
 const MessageTable = ({ node_id, messages, refs }) => {
 	const [showTooltip, setShowTooltip] = useState({});
 	const tooltipTimeout = useRef(null);
-	
+
 	useEffect(() => {
 		const handleWindowBlur = () => {
 			// If the document is hidden (e.g., window minimized or tab switched)
@@ -32,8 +32,6 @@ const MessageTable = ({ node_id, messages, refs }) => {
 
 	const handleMouseEnter = (event, index) => {
 		// Set the background color of the button to a light blue when hovered
-		event.currentTarget.style.backgroundColor = "#e6f3ff";
-
 		showToast("Click to open chat", { type: "error" });
 
 		// Show the tooltip after a small delay
@@ -44,7 +42,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 
 	const handleMouseLeave = (event, index) => {
 		// Set the background color of the button back to white when not hovered
-		event.currentTarget.style.backgroundColor = "#fff";
+		//event.currentTarget.style.backgroundColor = "#fff";
 
 		// Hide the tooltip
 		clearTimeout(tooltipTimeout.current);
@@ -59,8 +57,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 			}
 		});
 	}, [messages, refs]);
-	
-	
+
 	const handleButtonClick = (node_id, index) => {
 		console.log(`User button clicked at index ${index}:`);
 
@@ -79,6 +76,62 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		});
 	};
 
+	const renderColumns = (messages) => {
+		let listItems = [];
+		for (let index = 0; index < messages.length; index = index + 2) {
+			let userMessage = messages[index];
+			let gptMessage = messages[index + 1];
+
+			let column = (
+				<Col
+					key={index}
+					xs="auto"
+					className="px-[0.5rem]"
+				>
+					{renderButton(index)}
+					{renderOverlay(userMessage, index)}
+					{renderButton(index + 1)}
+					{renderOverlay(gptMessage, index + 1)}
+				</Col>
+			);
+
+			listItems.push(column);
+		}
+		return listItems;
+	};
+
+	const renderButton = (index) => {
+		let isUser;
+		if (index % 2 === 0) {
+			isUser = true;
+		} else {
+			isUser = false;
+		}
+
+		return (
+			<div className="relative w-6 h-6">
+				{isUser && (
+					<button
+						ref={refs.current[index]}
+						className="absolute top-0 left-0 w-full h-full bg-blue-100 rounded-t-full hover:bg-blue-300 transition-colors duration-200"
+						onClick={() => handleButtonClick(node_id, index)}
+						onMouseEnter={(e) => handleMouseEnter(e, index)}
+						onMouseLeave={(e) => handleMouseLeave(e, index)}
+					/>
+				)}
+				{!isUser && (
+					<button
+						ref={refs.current[index]}
+						className="absolute bottom-0 left-0 w-full h-full bg-slate-100 rounded-b-full hover:bg-slate-300 transition-colors duration-200"
+						onClick={() => handleButtonClick(node_id, index)}
+						onMouseEnter={(e) => handleMouseEnter(e, index)}
+						onMouseLeave={(e) => handleMouseLeave(e, index)}
+					/>
+				)}
+			</div>
+		);
+	};
+
 	const renderTooltip = (msg) => (
 		<Tooltip
 			id="button-tooltip"
@@ -88,93 +141,27 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		</Tooltip>
 	);
 
+	const renderOverlay = (msg, index) => {
+		if (refs.current[index] && refs.current[index].current) {
+			return (
+				<Overlay
+					target={refs.current[index].current}
+					show={showTooltip[index]}
+					placement="top"
+				>
+					{renderTooltip(msg)}
+				</Overlay>
+			);
+		}
+		return null;
+	};
+
 	return (
 		<Container
 			fluid
-			className="border border-light bg-white shadow-sm rounded"
-			style={{ padding: "15px" }}
+			className="border border-light bg-white shadow-sm rounded p-3"
 		>
-			<Row className="h-50 flex-nowrap">
-				{messages.map((msg, index) => {
-					if (index % 2 === 0) { 
-						// User messages (even indices)
-						return (
-							<Col
-								key={`user-${index}`}
-								xs="auto"
-								className="p-1"
-							>
-								<Button
-									ref={refs.current[index]}
-									variant="outline-primary"
-									className="rounded-pill"
-									style={{
-										width: "35px",
-										height: "35px",
-										border: "1px solid #b3b3b3",
-										backgroundColor: "#fff",
-										transition: "background-color 0.2s ease-in-out",
-									}}
-									onClick={() => handleButtonClick(node_id, index)}
-									onMouseEnter={(e) => handleMouseEnter(e, index)}
-									onMouseLeave={(e) => handleMouseLeave(e, index)}
-								/>
-								{refs.current[index] && refs.current[index].current && (
-									<Overlay
-										target={refs.current[index].current}
-										show={showTooltip[index]}
-										placement="top"
-									>
-										{renderTooltip(msg)}
-									</Overlay>
-								)}
-							</Col>
-						);
-					}
-					return null;
-				})}
-			</Row>
-
-			<Row className="h-50 mt-3 flex-nowrap">
-				{messages.map((msg, index) => {
-					if (index % 2 !== 0) {
-						// GPT messages (odd indices)
-						return (
-							<Col
-								key={`gpt-${index}`}
-								xs="auto"
-								className="p-1"
-							>
-								<Button
-									ref={refs.current[index]}
-									variant="outline-secondary"
-									className="rounded-pill"
-									style={{
-										width: "35px",
-										height: "35px",
-										border: "1px solid #b3b3b3",
-										backgroundColor: "#fff",
-										transition: "background-color 0.2s ease-in-out",
-									}}
-									onClick={() => handleButtonClick(node_id, index)}
-									onMouseEnter={(e) => handleMouseEnter(e, index)}
-									onMouseLeave={(e) => handleMouseLeave(e, index)}
-								/>
-								{refs.current[index] && refs.current[index].current && (
-									<Overlay
-										target={refs.current[index].current}
-										show={showTooltip[index]}
-										placement="top"
-									>
-										{renderTooltip(msg)}
-									</Overlay>
-								)}
-							</Col>
-						);
-					}
-					return null;
-				})}
-			</Row>
+			<Row className="h-50 flex-nowrap justify-center">{renderColumns(messages)}</Row>
 		</Container>
 	);
 };

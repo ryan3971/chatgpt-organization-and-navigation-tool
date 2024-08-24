@@ -2,23 +2,29 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Card, Image } from "react-bootstrap";
 import gptLogo from "./gpt_logo.png";
 
+import { useEffect, useRef, useState } from "react";
+
+import './NodeTitle.css'
+
+
 const Title = ({ title }) => {
+	const titleRef = useRef(null);
+	const [isTwoLines, setIsTwoLines] = useState(false);
+
+	useEffect(() => {
+		const titleElement = titleRef.current;
+		if (titleElement) {
+			// Check if the title wraps to two lines
+			setIsTwoLines(titleElement.scrollHeight > titleElement.clientHeight);
+		}
+	}, [title]);
+
 	return (
 		<Card.Header
-			className="d-flex align-items-center"
-			style={{ backgroundColor: "#f8f9fa", padding: "10px" }}
-		>
-			<Image
-				src={gptLogo}
-				alt="gpt_icon"
-				style={{ height: "20px" }}
-			/>
-			<span
-				className="ms-2"
-				style={{ fontWeight: "500", fontSize: "1rem", color: "#495057" }}
+				ref={titleRef}
+				className={`text-center font-semibold truncate-title ${isTwoLines ? "text-base" : "text-lg"}`}
 			>
 				{title}
-			</span>
 		</Card.Header>
 	);
 };
