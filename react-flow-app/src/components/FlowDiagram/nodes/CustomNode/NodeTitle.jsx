@@ -1,6 +1,4 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Card, Image } from "react-bootstrap";
-import gptLogo from "./gpt_logo.png";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -20,12 +18,13 @@ const Title = ({ title }) => {
 	}, [title]);
 
 	return (
-		<Card.Header
-				ref={titleRef}
-				className={`text-center font-semibold truncate-title ${isTwoLines ? "text-base" : "text-lg"}`}
-			>
-				{title}
-		</Card.Header>
+		<div
+			ref={titleRef}
+			//className={`bg-gray-100 p-2 rounded-t-md text-center font-semibold truncate-title ${isTwoLines ? "text-base" : "text-lg"}`}
+			className={"px-4 py-1 rounded-t-full text-center font-semibold truncate-title text-base whitespace-normal overflow-hidden flex-nowrap"}
+		>
+			{title}
+		</div>
 	);
 };
 

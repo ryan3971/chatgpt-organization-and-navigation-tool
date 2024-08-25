@@ -12,31 +12,21 @@ const CustomNode = ({ id, data }) => {
 	const { title, messages, branches, isParent } = data;
 	const refs = useRef({});
 
+	console.log("Node messages:", messages);
+
 	return (
-		<Card
-			className="bg-gray-50 border border-gray-200 shadow-sm rounded-lg w-min-[12rem]"
+		<div
+			className="bg-gray-100 border border-gray-200 shadow-sm rounded-full min-w-[12rem]"
 			onDoubleClick={() => console.log("Double clicked node", id)}
 		>
-			<Card.Header
-				className="bg-gray-100 p-2 rounded-t-md"
-			>
-				<Title title={title} />
-			</Card.Header>
-
-			<Card.Body
-				className="d-flex justify-content-center align-items-center p-2"
-			>
-				<Container fluid>
-					<Row className="justify-content-center">
-						{/* Message Table */}
-						<MessageTable
-							node_id={id}
-							messages={messages}
-							refs={refs}
-						/>
-					</Row>
-				</Container>
-			</Card.Body>
+			{/* Title */}
+			<Title title={title} />
+			{/* Message Table */}
+			<MessageTable
+				node_id={id}
+				messages={messages}
+				refs={refs}
+			/>
 
 			{/* Top Handle if node is a parent */}
 			{!isParent && (
@@ -50,6 +40,7 @@ const CustomNode = ({ id, data }) => {
 						transform: "translateX(-50%)", // Centered horizontally
 						width: "16px",
 						height: "16px",
+						opacity: 0,
 					}}
 				/>
 			)}
@@ -57,7 +48,11 @@ const CustomNode = ({ id, data }) => {
 			{/* Handles for branches */}
 			{Object.keys(branches).map((key, index) => {
 				const branch = branches[key];
-				const targetRef = refs.current[Number(branch.selectedTextContainerId)] || null;
+				let targetRef = null;
+				if (branch.selectedTextContainerId)	{
+					const columnIndex = Math.floor(branch.selectedTextContainerId / 2);
+					targetRef = refs.current[columnIndex];
+				}
 				return (
 					<CustomHandle
 						node_id={id}
@@ -67,7 +62,7 @@ const CustomNode = ({ id, data }) => {
 					/>
 				);
 			})}
-		</Card>
+		</div>
 	);
 };
 

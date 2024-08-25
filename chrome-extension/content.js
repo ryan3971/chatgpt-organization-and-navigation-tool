@@ -232,14 +232,14 @@ function getNodeMessages() {
 			break; // Exit the loop if no more conversation turns are found
 		}
 		
-		// locate the element within the conversation turn that has the deata-message-id attribute (using this to skip down to the closet identifiable element before the inner text)
+		// locate the element within the conversation turn that has the data-message-id attribute (using this to skip down to the closet identifiable element before the inner text)
 		const dataMessageId = conversationTurn.querySelector(CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE);
 
 		// Extract the text and trim it to the first 100 characters
 		const text = dataMessageId.textContent.trim().substring(0, 100);
 
-		// Store the data
-		nodeMessages.push(text);
+		let index = Math.floor(turnNumber / 2);
+		nodeMessages[index].push(text);
 
 		turnNumber++; // Move to the next conversation turn
 	}
@@ -297,7 +297,7 @@ async function getSelectedText() {
 			// Extract the number from the conversation-turn attribute
 			var selectedTextContainerId = dataTestId.match(/(\d+)/)[0]
 			console.log("Selected text container id:", selectedTextContainerId);
-			selectedTextContainerId = String(selectedTextContainerId - 2); // subtract 2 to normalize it
+			selectedTextContainerId = selectedTextContainerId - 2; // subtract 2 to normalize it
 
 			// return the selected text and the data-testid value
 			response.flag = Constants.VALID_TEXT_SELECTION;

@@ -34,7 +34,7 @@ export const transformStorageData = (storageData) => {
 					id: `${node_key}-${branch_key}`,
 					type: "custom-edge",
 					source: node_key,
-					sourceHandle: branch.selectedTextContainerId || "0",	// "0" if null
+					sourceHandle: String(branch.selectedTextContainerId) || "overwritten",
 					target: branch_key,
 					data: {
 						selectedText: branch.selectedText,

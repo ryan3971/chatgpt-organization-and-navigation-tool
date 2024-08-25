@@ -7,12 +7,9 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 
 	useEffect(() => {
 		if (!targetRef) {
-			// cause where the branch message was overwritten; branch should align to the right
 			setPositionStyle({
-				left: "100%",
-				right: "0",
-				width: "16px",
-				height: "16px",
+				style: {opacity: 0},
+				position: Position.Right,
 			});
 		} else if (targetRef.current) {
 			// Get the bounding box of the target (e.g., the button)
@@ -21,10 +18,11 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 
 			// Calculate the handle position based on the target element's position
 			setPositionStyle({
-				left: `${parentRect.left + targetRect.width / 2}px`, // Align center of handle
-				bottom: "0",
-				width: "16px",
-				height: "16px",
+				style: {
+					left: `${parentRect.left + targetRect.width / 2}px`, // Align center of handle
+					opacity: 0
+				},
+				position: Position.Bottom
 			});
 		}
 		updateNodeInternals(node_id);
@@ -34,10 +32,10 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 	return (
 		<Handle
 			className="bg-dark rounded-circle"
-			style={positionStyle}
-			id={branch.selectedTextContainerId || "0"}
+			style={positionStyle.style}
+			id={String(branch.selectedTextContainerId) || "overwritten"}
 			type="source"
-			position={Position.Bottom}
+			position={positionStyle.position}
 			isConnectable
 		/>
 	);
