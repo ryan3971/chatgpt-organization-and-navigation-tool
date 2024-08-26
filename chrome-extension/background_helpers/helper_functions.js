@@ -150,12 +150,12 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
     for (const branch_id in node.branches) {
 
         let selectedTextContainerId = node.branches[branch_id].selectedTextContainerId;
-        selectedTextContainerId = Number(selectedTextContainerId) - 2;  // convert back to number, subtract 2 to account for containers beginning at 2
+        selectedTextContainerId = selectedTextContainerId;  // convert back to number, already has been normalized
         
         console.log("Selected text container id - helper:", selectedTextContainerId);
-        console.log("Messages length - helper:", messagesLength);
+        console.log("Messages length - helper:", messagesLength - 2);
 
-        if (selectedTextContainerId > messagesLength - 2) { // subtract 2 to account for the overwritten messages
+        if (selectedTextContainerId >= messagesLength - 2) { // subtract 2 to account for the overwritten messages
             // set the selected text container id to be null
             node.branches[branch_id].selectedTextContainerId = null;
             console.log("Selected text container id is greater than the length of the messages. Setting it to null");

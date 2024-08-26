@@ -238,7 +238,10 @@ function getNodeMessages() {
 		// Extract the text and trim it to the first 100 characters
 		const text = dataMessageId.textContent.trim().substring(0, 100);
 
-		let index = Math.floor(turnNumber / 2);
+		let index = Math.floor(turnNumber / 2) - 1;
+		if (!nodeMessages[index]) {
+			nodeMessages[index] = [];
+		}
 		nodeMessages[index].push(text);
 
 		turnNumber++; // Move to the next conversation turn

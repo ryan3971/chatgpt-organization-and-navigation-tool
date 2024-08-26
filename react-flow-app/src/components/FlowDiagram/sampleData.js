@@ -3,7 +3,7 @@ const sampleData = {
 		title: "Chat Title 1",
 		isParent: true,
 		messages: [
-			["Hello, how are you?","I'm fine, thank you! How can I help you today?"],
+			["Hello, how are you? eqweqwewq qweqweqwe qweqweqwe","I'm fine, thank you! How can I help you today?"],
 			["What is the weather like today?", "The weather is sunny with a high of 25°C."],
 			["What is the weather like today?", "The weather is sunny with a high of 25°C."],
 			["What is the weather like today?","The weather is sunny with a high of 25°C."],

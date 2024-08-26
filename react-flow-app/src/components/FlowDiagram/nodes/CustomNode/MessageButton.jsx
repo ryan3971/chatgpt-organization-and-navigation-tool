@@ -6,8 +6,6 @@ import * as Constants from "../../../../util/constants";
 
 import { showToast } from "../../../toast/toastService"; // Ensure the correct path to your toast function
 
-const TOOLTIP_HEIGHT = 80	// Height of the tooltip in pixels
-
 const MessageButton = ({ node_id, message, message_index, style }) => {
 	const [showTooltip, setShowTooltip] = useState(false);
 	const [tooltipPosition, setTooltipPosition] = useState({ top: -9999, left: -9999 });
@@ -105,7 +103,7 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 	const Tooltip = tooltipReady ? (
 		<div
 			ref={tooltipRef}
-			className="fixed bg-orange-100 rounded-md px-3 py-2 w-[20rem] max-h-[10rem] overflow-y-auto shadow-lg text-s text-center"
+			className="fixed bg-orange-100 rounded-lg px-3 py-2 w-[20rem] max-h-[10rem] overflow-y-auto shadow-lg text-s text-center"
 			style={{
 				top: `${tooltipPosition.top}px`, // Use the calculated top position
 				left: `${tooltipPosition.left}px`, // Use the calculated left position
