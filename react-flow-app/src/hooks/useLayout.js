@@ -1,12 +1,11 @@
 import { useReactFlow, useNodesInitialized } from "@xyflow/react";
 import { useEffect, useState } from "react";
 
-import { getLayoutedElements } from "../components/FlowDiagram/layouting/AutoLayout";
+import { getLayoutedNodes } from "../components/FlowDiagram/layouting/AutoLayout";
 
 const options = {
 	includeHiddenNodes: false,
 };
-
 export default function useLayout() {
 	const { getNodes, getEdges } = useReactFlow();
 	const nodesInitialized = useNodesInitialized(options);
@@ -14,13 +13,20 @@ export default function useLayout() {
 
 	useEffect(() => {
 		console.log("Nodes initialized", nodesInitialized);
-		if (nodesInitialized) {
-			const currentNodes = getNodes();
-			const currentEdges = getEdges();
 
-			const layoutedElements = getLayoutedElements(currentNodes, currentEdges, { direction: "TB" });
-			setLayout({nodes: layoutedElements.nodes, edges: layoutedElements.edges});	// redundant but reminder of the key value pair
-		}
+		const layoutNodes = async () => {
+			if (nodesInitialized) {
+				const currentNodes = getNodes();
+				const currentEdges = getEdges();
+
+				// Get the layouted nodes and apply them
+				const layoutedNodes = await getLayoutedNodes(currentNodes, currentEdges);
+
+				setLayout({ nodes: layoutedNodes, edges: currentEdges });
+			}
+		};
+
+		layoutNodes(); // Trigger the async layout function when nodes are initialized
 	}, [nodesInitialized, getNodes, getEdges]);
 
 	return [layout];

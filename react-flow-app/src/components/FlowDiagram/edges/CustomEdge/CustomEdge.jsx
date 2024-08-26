@@ -8,18 +8,23 @@ export default function CustomEdge({ id, sourceX, sourceY, targetX, targetY, dat
 		targetY,
 	});
 
+	console.log("CustomEdge id:", id);
+
 	return (
 		<>
 			<BaseEdge
 				id={id}
 				path={edgePath}
+				sourceX={sourceX}
+				sourceY={sourceY}
 			/>
 			<EdgeText
 				x={labelX}
 				y={labelY}
 				label={data.selectedText}
 				labelStyle={{ fill: "#333", fontSize: "12px" }} // Customize text styling here
-				labelShowBg={false}
+				labelShowBg={true}
+				labelBgStyle={{ opacity: 0 }} // Customize background styling here
 			/>
 		</>
 	);

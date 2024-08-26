@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
-const CustomHandle = ({ node_id, branch, targetRef }) => {
+const CustomHandle = ({ node_id, containerId, targetRef }) => {
 	const updateNodeInternals = useUpdateNodeInternals();
 	const [positionStyle, setPositionStyle] = useState({});
 
+	const sourceHandle = `${node_id}-s-${containerId}`;
+	console.log("Node ID: ", node_id);
+	console.log("Source Handle:", sourceHandle);
+
 	useEffect(() => {
-		if (!targetRef) {
+		if (!containerId) {
 			setPositionStyle({
-				style: {opacity: 0},
+				style: {}, //opacity: 0},
 				position: Position.Right,
 			});
-		} else if (targetRef.current) {
+		} else if (targetRef && targetRef.current) {
 			// Get the bounding box of the target (e.g., the button)
 			const targetRect = targetRef.current.getBoundingClientRect();
 			//const parentRect = targetRef.current.offsetParent.getBoundingClientRect();
@@ -20,9 +24,14 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 			setPositionStyle({
 				style: {
 					left: `${targetRect.left + targetRect.width / 2}px`, // Align center of handle
-					opacity: 0,
+					//	opacity: 0,
 				},
 				position: Position.Bottom,
+			});
+		} else {
+			setPositionStyle({
+				style: {},
+				position: {},
 			});
 		}
 		updateNodeInternals(node_id);
@@ -33,7 +42,8 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 		<Handle
 			className="bg-dark rounded-circle"
 			style={positionStyle.style}
-			id={String(branch.selectedTextContainerId) || "overwritten"}
+			key={sourceHandle}
+			id={sourceHandle}
 			type="source"
 			position={positionStyle.position}
 			isConnectable
