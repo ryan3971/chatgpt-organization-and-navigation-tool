@@ -105,7 +105,7 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 	const Tooltip = tooltipReady ? (
 		<div
 			ref={tooltipRef}
-			className="fixed bg-orange-100 rounded-md px-3 py-2 max-w-[20rem] max-h-[10rem] overflow-y-auto overflow-x-hidden shadow-lg text-s inline-block whitespace-nowrap"
+			className="fixed bg-orange-100 rounded-md px-3 py-2 w-[20rem] max-h-[10rem] overflow-y-auto shadow-lg text-s text-center"
 			style={{
 				top: `${tooltipPosition.top}px`, // Use the calculated top position
 				left: `${tooltipPosition.left}px`, // Use the calculated left position
