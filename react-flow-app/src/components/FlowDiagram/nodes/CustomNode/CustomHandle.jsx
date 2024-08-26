@@ -14,15 +14,15 @@ const CustomHandle = ({ node_id, branch, targetRef }) => {
 		} else if (targetRef.current) {
 			// Get the bounding box of the target (e.g., the button)
 			const targetRect = targetRef.current.getBoundingClientRect();
-			const parentRect = targetRef.current.offsetParent.getBoundingClientRect();
+			//const parentRect = targetRef.current.offsetParent.getBoundingClientRect();
 
 			// Calculate the handle position based on the target element's position
 			setPositionStyle({
 				style: {
-					left: `${parentRect.left + targetRect.width / 2}px`, // Align center of handle
-					opacity: 0
+					left: `${targetRect.left + targetRect.width / 2}px`, // Align center of handle
+					opacity: 0,
 				},
-				position: Position.Bottom
+				position: Position.Bottom,
 			});
 		}
 		updateNodeInternals(node_id);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Container, Row, Col } from "react-bootstrap";
 
@@ -27,7 +27,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 	useEffect(() => {
 		// Create references for each message button if not already created
 		messages.forEach((msg, index) => {
-	    	if (!refs.current[index]) {
+			if (!refs.current[index]) {
 				console.log("Creating ref for index", index);
 				refs.current[index] = React.createRef();
 			}

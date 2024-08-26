@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Card, Container, Row } from "react-bootstrap";
 
 import { Handle, Position } from "@xyflow/react";
 
