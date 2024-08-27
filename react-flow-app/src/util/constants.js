@@ -20,3 +20,6 @@ export const HANDLE_OPEN_NODE_CHAT = "handle_open_node_chat";
 export const REACT_GET_NODE_SPACE_KEYS = "react_get_node_space_keys";
 
 export const HANDLE_OPEN_NODE_CHAT_AT_MESSAGE = "handle_open_node_chat_at_message";
+
+export const REACT_UPDATE_NODE_SPACE_TITLE = "react_update_node_space_title";
+export const REACT_DELETE_NODE_SPACE ="react_delete_node_space";

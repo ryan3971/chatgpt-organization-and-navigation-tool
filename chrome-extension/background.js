@@ -5,8 +5,10 @@ import {
 	createNewNodeBranch,
 	updateNodeTitle,
 	deleteNode,
+	deleteNodeSpace,
 	getNodeSpaces,
 	getNodeSpaceData,
+	updateNodeSpaceTitle,
 } from "./background_helpers/helper_functions.js";
 import * as Constants from "./Constants/constants.js";
 
@@ -19,7 +21,8 @@ import * as Constants from "./Constants/constants.js";
 let state = {
 	isNewBranchNode: false,
 	reactWindowId: null,
-	navigatedChat : {tabId: null, messageIndex: null},
+	navigatedChat: { tabId: null, messageIndex: null },
+	storageChange: false,
 };
 
 // store data to pass onto a newly created branch node
@@ -112,7 +115,6 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 
 /***** Context Menu Setup ******/
 chrome.runtime.onInstalled.addListener(() => {
-	
 	chrome.contextMenus.create({
 		id: Constants.CONTEXT_MENU_OPEN_GUI,
 		title: "Open GUI",
@@ -387,7 +389,6 @@ async function getNodeSpace(space_id) {
 }
 
 function navigateToNodeChatCallback(tab, message_index) {
-
 	// focus on the tab
 	chrome.windows.update(tab.windowId, { focused: true });
 
@@ -430,6 +431,21 @@ async function handleOpenNodeChat(node_id, message_index) {
 
 	return true;
 }
+
+/*** Storage Listener ****/
+
+// chrome.storage.onChanged.addListener(handleStorageChange);
+// function handleStorageChange(changes, namespace) {
+// 	if (!state.storageChange) {
+// 		return;
+// 	}
+
+// 	for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+// 		console.log(`Storage key "${key}" in namespace "${namespace}" changed.`, `Old value was "${oldValue}", new value is "${newValue}".`);
+// 		console.log(newValue);
+
+// 	}
+// }
 
 /***** Messaging ******/
 
@@ -526,6 +542,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 				sendResponse(response);
 			});
 			break;
+		case Constants.REACT_UPDATE_NODE_SPACE_TITLE:
+			console.log("Received message to update node space title");
+			updateNodeSpaceTitle(data).then((status) => {
+				if (status) {
+					state.storageChange = true;
+				}
+				response.status = status;
+				sendResponse(response);
+			});
+			break;
+		// case Constants.REACT_DELETE_NODE_SPACE:
+		// 	console.log("Received message to delete node space");
+		// 	deleteNodeSpace(data.node_space_id).then((status) => {
+		// 		if (status) {
+		// 			state.storageChange = true;
+		// 		}
+		// 		response.status = status;
+		// 		sendResponse(response);
+		// 	});
 		default:
 			console.error("Unknown action:", message.action);
 			sendResponse(response);

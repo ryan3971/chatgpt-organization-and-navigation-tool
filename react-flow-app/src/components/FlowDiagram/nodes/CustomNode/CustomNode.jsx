@@ -39,7 +39,7 @@ const CustomNode = ({ id, data }) => {
 						transform: "translateX(-50%)", // Centered horizontally
 						width: "16px",
 						height: "16px",
-					//	opacity: 0,
+						opacity: 0,
 					}}
 				/>
 			)}

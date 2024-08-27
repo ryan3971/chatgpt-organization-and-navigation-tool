@@ -33,7 +33,6 @@ export const transformStorageData = (storageData) => {
 			// add the source handle to the list that will be stored in the node
 			sourceHandlesList.push({
 				id: sourceHandle,
-				isSideHandle: branch.selectedTextContainerId ? false : true,
 			});
 
 			console.log("Edge Source Handle:", sourceHandle);
@@ -48,6 +47,7 @@ export const transformStorageData = (storageData) => {
 				targetHandle: targetHandle,
 				data: {
 					selectedText: branch.selectedText,
+					isMessageOverwritten: branch.isMessageOverwritten
 				},
 			};
 

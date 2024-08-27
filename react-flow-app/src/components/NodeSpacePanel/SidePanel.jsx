@@ -12,24 +12,31 @@ const SidePanel = ({ isOpen, onClose, nodeSpaces, onChangeActiveSpace }) => {
 			show={isOpen}
 			onHide={onClose}
 			placement="start"
-			style={{ width: "35%" }}
+			style={{ width: "30%" }}
 		>
 			<Offcanvas.Header closeButton>
 				<Offcanvas.Title>Workspaces</Offcanvas.Title>
 			</Offcanvas.Header>
 			<Offcanvas.Body>
-				<ListGroup>
-					{nodeSpaces.map((space, index) => (
-						<ListGroup.Item key={space}>
-							<PanelNodeSpace
-								id={space}
-								title={`Nodespace ${index + 1}`}
-								imageUrl={gpt_image}
-								infoText={"Info"}
-								onClick={onChangeActiveSpace}
-							/>
-						</ListGroup.Item>
-					))}
+				<ListGroup >
+					{Object.keys(nodeSpaces).map((spaceKey, index) => {
+						console.log("Space key", spaceKey);
+						const space = nodeSpaces[spaceKey];
+
+						return (
+							<ListGroup.Item 
+								key={spaceKey}
+								className="p-2">
+								<PanelNodeSpace
+									id={spaceKey}
+									title={`Nodespace ${index + 1}`}
+									imageUrl={gpt_image}
+									infoText={`${space.title}`}
+									onClick={onChangeActiveSpace}
+								/>
+							</ListGroup.Item>
+						);
+					})}
 				</ListGroup>
 			</Offcanvas.Body>
 		</Offcanvas>

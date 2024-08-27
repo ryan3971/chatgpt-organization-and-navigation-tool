@@ -36,8 +36,6 @@ const MessageTable = ({ node_id, messages, refs }) => {
 
 	const renderButton = (index, message) => {
 		const isUser = index % 2 === 0; // true if index is even, false if index is odd
-		console.log("Rendering message on button", index);
-		console.log("IsUser:", isUser);
 		return (
 			<div className="flex justify-center">
 				{isUser && (
@@ -64,7 +62,6 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		<Container fluid>
 			<Row className="h-full flex-nowrap">
 				{messages.map((msg, index) => {
-					console.log("Rendering message", msg);
 						let userMessage = msg[0];
 						let gptMessage = msg[1];
 						

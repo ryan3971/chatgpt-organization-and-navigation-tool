@@ -50,10 +50,15 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 		<div
 			ref={menuRef} // Assign the ref to the context menu
 			style={{ top, left, right, bottom }}
-			className="context-menu"
+			className="bg-white border shadow-lg absolute z-10"
 			{...props}
 		>
-			<button onClick={handleOpenChat}>Open Chat</button>
+			<button
+				className="border-0 block p-2 text-left w-full hover:bg-white"
+				onClick={handleOpenChat}
+			>
+				Open Chat
+			</button>
 		</div>
 	);
 }

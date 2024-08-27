@@ -2,11 +2,22 @@ import ELK from "elkjs";
 
 const layoutOptions = {
 	"elk.algorithm": "layered",
-	"elk.direction": "DOWN" ,
+	"elk.direction": "DOWN",
 	"elk.layered.spacing.edgeNodeBetweenLayers": "50",
-	"elk.spacing.nodeNode": "80",
-	"elk.layered.nodePlacement.bk.edgeCrossing.minimize": "true", // Minimize edge crossings
+	"elk.spacing.nodeNode": "100",
+	"elk.spacing.edgeNode": "100",
 	"elk.layered.nodePlacement.strategy": "SIMPLE",
+
+	//"elk.spacing.edgeEdge": "100",
+
+	//"elk.layered.spacing.nodeNodeBetweenLayers": 50,
+	//"elk.layered.spacing.nodeNode": 30,
+	// "elk.layered.layering.strategy": "INTERACTIVE",
+	//"elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+	// "elk.edgeRouting": "ORTHOGONAL",
+	// "elk.hierarchyHandling": "INCLUDE_CHILDREN",
+	//"elk.portConstraints": "FIXED_ORDER", // Ensures ports have defined sides
+	//"elk.layered.nodePlacement.bk.edgeCrossing.minimize": "true", // Minimize edge crossings
 };
 
 const elk = new ELK();
@@ -29,8 +40,9 @@ export const getLayoutedNodes = async (nodes, edges) => {
 			const sourcePorts = node.data.sourceHandles.map((sourcePort) => ({
 				id: sourcePort.id,
 				properties: {
-					side: sourcePort.isSideHandle ? "EAST" : "SOUTH",
+					side: "SOUTH",
 				},
+
 			}));
 
 			return {
@@ -40,7 +52,13 @@ export const getLayoutedNodes = async (nodes, edges) => {
 				properties: {
 					"org.eclipse.elk.portConstraints": "FIXED_ORDER",
 				},
-				ports: [{ id: node.id }, ...targetPorts, ...sourcePorts],
+				ports: [
+					{
+						id: `${node.id}`, // Ensure the main port has a unique ID and side assignment
+					},
+					...targetPorts,
+					...sourcePorts,
+				],
 			};
 		}),
 
@@ -48,8 +66,6 @@ export const getLayoutedNodes = async (nodes, edges) => {
 			id: edge.id,
 			sources: [edge.sourceHandle || edge.source],
 			targets: [edge.targetHandle || edge.target],
-			x: edge.x || 0,
-			y: edge.t || 0,
 		})),
 	};
 

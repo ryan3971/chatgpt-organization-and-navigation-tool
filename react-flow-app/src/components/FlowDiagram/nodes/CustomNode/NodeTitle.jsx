@@ -11,7 +11,7 @@ const Title = ({ title }) => {
 	return (
 		<div
 			ref={titleRef}
-			className="px-4 py-1 rounded-t-full text-center font-semibold text-base whitespace-normal overflow-hidden flex-nowrap"
+			className="px-4 py-1 rounded-t-full text-center font-semibold text-base"
 		>
 			{title}
 		</div>
