@@ -23,6 +23,7 @@ let state = {
 	reactWindowId: null,
 	navigatedChat: { tabId: null, messageIndex: null },
 	storageChange: false,
+	lastActiveChatTabId: null,
 };
 
 // store data to pass onto a newly created branch node
@@ -168,6 +169,13 @@ function openOverviewWindow() {
 		chrome.windows.update(state.reactWindowId, { focused: true });
 		return true;
 	}
+
+	// get the info for the currently active tab and save it
+	chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+		const tab = tabs[0];
+		state.lastActiveChatTabId = tab.id;
+		console.log("Active tab before React app opens: ", tab);
+	});
 
 	console.log("Action button clicked. Opening window.");
 
@@ -377,9 +385,33 @@ async function deleteChat(data) {
 }
 
 async function getNodeSpaceKeys() {
+	var active_node_space = null;
+
 	// Get the node space keys
 	const node_space_keys = await getNodeSpaces();
-	return node_space_keys;
+
+	// try sending a message to the active tab to retrieve node information
+	try {
+		const response = await sendMessage(state.lastActiveChatTabId, Constants.GET_NODE_DATA);
+
+		if (!response.status) {
+			console.log("Couldn't get info on active tab. Oh well");
+		} else {
+			console.log("Found active Space");
+			const node_data = response.data;
+			console.log("Node data:", node_data);
+			active_node_space = node_data.node_space_id;
+		}
+	} catch (error) {
+		console.error("Could not get info to load the active space");
+	}
+
+	const space_data = {
+		node_space_keys: node_space_keys,
+		active_node_space: active_node_space,
+	};
+
+	return space_data;
 }
 
 async function getNodeSpace(space_id) {
@@ -517,10 +549,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 			break;
 		case Constants.REACT_APP_MOUNTED:
 			console.log("Received message that React application mounted");
-			getNodeSpaceKeys().then((node_space_keys) => {
-				if (node_space_keys) {
+			getNodeSpaceKeys().then((space_data) => {
+				if (space_data) {
 					response.status = true;
-					response.data = node_space_keys;
+					response.data = space_data;
 				}
 				sendResponse(response);
 			});

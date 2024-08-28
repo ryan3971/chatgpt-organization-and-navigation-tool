@@ -318,7 +318,7 @@ export async function updateNodeSpaceTitle(nodeSpaceId, newTitle) {
         console.error("Node spaces not found in storage");
         return false;
     }
-
+    console.log("Node spaces keys:", nodeSpacesKeys);
     if (nodeSpaceId in nodeSpacesKeys) {
         nodeSpacesKeys[nodeSpaceId].title = newTitle;
     } else {
