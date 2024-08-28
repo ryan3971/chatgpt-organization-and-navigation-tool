@@ -9,7 +9,7 @@ export async function doesNodeExist(node_id)    {
 	if (!node_spaces_keys) return false; // false if node_spaces is undefined or false
     
 	// Iterate through the node spaces and get the key to the nodes within them
-	for (const node_space_key of node_spaces_keys) {
+	for (const node_space_key in node_spaces_keys) {
 		const nodes = await getFromStorage(node_space_key);
 
         // If nodes is undefined, continue to the next node space
@@ -30,35 +30,37 @@ export async function doesNodeExist(node_id)    {
 }
 
 /***** Create New Storage Objects *****/
-export async function createNewNodeSpace() {
-    const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+export async function createNewNodeSpace(node_space_title) {
+	const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
 
-    if (nodeSpacesKeys === false) {
-        return false;
-    }
-    // create a new node space id
-    const nodeSpaceId = generateRandomId();
+	if (nodeSpacesKeys === false) {
+		return false;
+	}
+	// create a new node space id
+	const nodeSpaceId = generateRandomId();
 
-    // save the new node space id
-    var savedNodeSpaces;
-    if (nodeSpacesKeys === null) {
-        savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, [nodeSpaceId]);
-    } else {
-        nodeSpacesKeys.push(nodeSpaceId);
-        savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
-    }
+	// save the new node space id
+	var savedNodeSpaces;
+	if (nodeSpacesKeys === null) {
+        const nodeSpace = {}
+        nodeSpace[nodeSpaceId] = { title: node_space_title };
+		savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpace);
+	} else {
+		nodeSpacesKeys[nodeSpaceId] = nodeSpace;
+		savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
+	}
 
-    if (!savedNodeSpaces) {
-        console.error("Node spaces not saved to storage");
-        return false;
-    }
-    return nodeSpaceId;
+	if (!savedNodeSpaces) {
+		console.error("Node spaces not saved to storage");
+		return false;
+	}
+	return nodeSpaceId;
 }
 
 export async function createNewNodeParent(node_id, node_title) {
     
     // Create a new node space
-    const nodeSpaceId = await createNewNodeSpace();
+    const nodeSpaceId = await createNewNodeSpace(node_title);
     if (!nodeSpaceId) {
         console.error("Node space not created");
         return false;
@@ -155,7 +157,7 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
         console.log("Selected text container id - helper:", selectedTextContainerId);
         console.log("Messages length - helper:", messagesLength - 2);
 
-        if (selectedTextContainerId >= messagesLength - 2) { // subtract 2 to account for the overwritten messages
+        if (selectedTextContainerId > messagesLength - 2) { // subtract 2 to account for the overwritten messages
             // set the selected text container id to be null
             node.branches[branch_id].selectedTextContainerId = null;
             console.log("Selected text container id is greater than the length of the messages. Setting it to null");
@@ -181,7 +183,7 @@ export async function updateNodeTitle(nodeId, newTitle) {
         return false;
     }
     
-    for (const nodeSpaceKey of nodeSpacesKeys) {
+    for (const nodeSpaceKey in nodeSpacesKeys) {
         const nodes = await getFromStorage(nodeSpaceKey);
 
         if (!nodes) {
@@ -224,9 +226,9 @@ export async function deleteNodeSpace(nodeSpaceId) {
     }
 
     // remove the node space key from the node spaces keys
-    const nodeSpacesKeysIndex = nodeSpacesKeys.indexOf(nodeSpaceId);
-    if (nodeSpacesKeysIndex > -1) {
-        nodeSpacesKeys.splice(nodeSpacesKeysIndex, 1);
+
+    if (nodeSpaceId in nodeSpacesKeys) {
+        delete nodeSpacesKeys[nodeSpaceId];
     } else {
         console.error("Node space key not found in node spaces keys");
         return false;
@@ -253,7 +255,7 @@ export async function deleteNode(node_id, nodes=null, level=0) {
             return false;
         }
         
-        for (nodeSpaceKey of nodeSpacesKeys) {
+        for (nodeSpaceKey in nodeSpacesKeys) {
             nodes = await getFromStorage(nodeSpaceKey);
 
             if (!nodes) {
@@ -304,6 +306,30 @@ export async function deleteNode(node_id, nodes=null, level=0) {
             console.error("Nodes not saved to storage");
             return false;
         }
+    }
+    return true;
+}
+
+export async function updateNodeSpaceTitle(nodeSpaceId, newTitle) {
+        
+    const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+
+    if (!nodeSpacesKeys) {
+        console.error("Node spaces not found in storage");
+        return false;
+    }
+
+    if (nodeSpaceId in nodeSpacesKeys) {
+        nodeSpacesKeys[nodeSpaceId].title = newTitle;
+    } else {
+        console.error("Node space not found in storage");
+        return false;
+    }
+
+    const savedNodeSpacesKeys = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
+    if (!savedNodeSpacesKeys) {
+        console.error("Node spaces title not saved to storage");
+        return false;
     }
     return true;
 }

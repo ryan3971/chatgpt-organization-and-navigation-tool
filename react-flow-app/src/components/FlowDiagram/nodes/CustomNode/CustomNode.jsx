@@ -46,7 +46,7 @@ const CustomNode = ({ id, data, selected }) => {
 			)}
 
 			{/* Handles for branches */}
-			{selectedTextContainerIds.map((containerId, index) => {
+			{selectedTextContainerIds.map((containerId) => {
 				//console.log("Branch handle for container", containerId);
 				//console.log("Branch index", index);
 				let targetRef = null;

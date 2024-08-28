@@ -3,7 +3,7 @@ import ELK from "elkjs";
 const layoutOptions = {
 	"elk.algorithm": "layered",
 	"elk.direction": "DOWN",
-	"elk.layered.spacing.edgeNodeBetweenLayers": "50",
+	"elk.layered.spacing.edgeNodeBetweenLayers": "75",
 	"elk.spacing.nodeNode": "100",
 	"elk.spacing.edgeNode": "100",
 	"elk.layered.nodePlacement.strategy": "SIMPLE",

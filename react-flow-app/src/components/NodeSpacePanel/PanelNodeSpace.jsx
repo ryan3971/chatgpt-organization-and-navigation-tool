@@ -11,28 +11,29 @@ import { showToast } from "../toast/toastService";
 export const PanelNodeSpace = ({ id, onClick, title, imageUrl, infoText }) => {
 	const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
 	const [isEditing, setIsEditing] = useState(false);
-	const [newText, setNewText] = useState(infoText);
+	const [titleText, setTitleText] = useState(infoText);
 
 	// Use Effect to handle reamed node space title
 	useEffect(() => {
 
 		if (isEditing) return;
+		console.log("Renaming nodespace", id, titleText);
 
 		const data = {
 			node_space_id: id,
-			new_title: newText,
+			new_title: titleText,
 		};
 
 		// send a message to the chrome background script to open a chat window
-		sendMessageToBackground(Constants.REACT_UPDATE_NODE_SPACE_TITLE, data).then((response) => {
-			if (!response.status) {
-				showToast("Error opening chat", { type: "error" });
-				return;
-			}
-			console.log("Message sent to background script");
-		});
+		// sendMessageToBackground(Constants.REACT_UPDATE_NODE_SPACE_TITLE, data).then((response) => {
+		// 	if (!response.status) {
+		// 		showToast("Error renaming the Nodespace", { type: "error" });
+		// 		return;
+		// 	}
+		// 	showToast("Nodespace renamed successfully", { type: "success" });
+		// });
 
-	}, [isEditing, id, newText]);
+	}, [isEditing, id, titleText]);
 
 	// useEffect to handle Space deletion
 	// useEffect(() => {
@@ -52,6 +53,7 @@ export const PanelNodeSpace = ({ id, onClick, title, imageUrl, infoText }) => {
 
 	// }, []);
 
+	// Handle right-click context menu
 	const handleContextMenu = (e) => {
 		e.preventDefault(); // Prevent the default browser context menu
 		setContextMenu({
@@ -61,10 +63,12 @@ export const PanelNodeSpace = ({ id, onClick, title, imageUrl, infoText }) => {
 		});
 	};
 
+	// Close the context menu
 	const handleCloseContextMenu = () => {
 		setContextMenu({ ...contextMenu, visible: false });
 	};
 
+	// Handle the rename space click; enter edit mode
 	const handleEditClick = () => {
 		// close the context menu first
 		handleCloseContextMenu();
@@ -73,14 +77,17 @@ export const PanelNodeSpace = ({ id, onClick, title, imageUrl, infoText }) => {
 		setIsEditing(true);
 	};
 
+	// Handle input change; update the title text
 	const handleInputChange = (e) => {
-		setNewText(e.target.value);
+		setTitleText(e.target.value);
 	};
 
+	// Handle input blur (i.e., when the input loses focus)
 	const handleInputBlur = () => {
 		setIsEditing(false);
 	};
 
+	// Handle input key press; exit editing mode when pressing Enter
 	const handleInputKeyPress = (e) => {
 		if (e.key === "Enter") {
 			setIsEditing(false); // Exit editing mode when pressing Enter
@@ -110,14 +117,14 @@ export const PanelNodeSpace = ({ id, onClick, title, imageUrl, infoText }) => {
 						<div
 							className="text-left pb-1 font-semibold text-2xl leading-5 line-clamp-2 overflow-hidden text-ellipsis"
 							style={{ width: "100%", height: "100%" }}
-						//	onClick={handleEditClick} // Allow clicking the text to enter edit mode
+							//	onClick={handleEditClick} // Allow clicking the text to enter edit mode
 						>
-							<small>{newText}</small>
+							<small>{titleText}</small>
 						</div>
 					) : (
 						<Form.Control
 							type="text"
-							value={newText}
+							value={titleText}
 							onChange={handleInputChange}
 							onBlur={handleInputBlur}
 							onKeyDown={handleInputKeyPress}

@@ -14,16 +14,18 @@ import { Button } from "react-bootstrap";
 
 // import gpt_image from "./assets/gpt_logo.png";
 
-// const initialNodeSpaces = [
-// 	{ id: 1, title: "Nodespace 1", imageUrl: gpt_image, infoText: "Info 1" },
-// 	{ id: 2, title: "Nodespace 2", imageUrl: gpt_image, infoText: "Info 2" },
-// 	{ id: 3, title: "Nodespace 3", imageUrl: gpt_image, infoText: "Info 3" },
-// ];
+const initialNodeSpaces = {
+	node_1: { title: "Node 1 Title Extra Long Title" },
+	node_2: { title: "Node 2" },
+
+	// 	{ id: 2, title: "Nodespace 2", imageUrl: gpt_image, infoText: "Info 2" },
+	// 	{ id: 3, title: "Nodespace 3", imageUrl: gpt_image, infoText: "Info 3" },
+};
 
 
 const App = () => {
 	const [isPanelOpen, { togglePanel }] = useNavPanel(false);
-	const [nodeSpaces, setSpaces] = useState([]);
+	const [nodeSpaces, setSpaces] = useState(initialNodeSpaces);
 	const [activeSpace, setActiveSpace] = useState(null);
 
 	// useEffect to tell the chrome application that react app has mounted

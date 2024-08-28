@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
-const CustomHandle = ({ node_id, containerId, targetRef }) => {
+const CustomHandle = ({ node_id, containerId, targetRef, sourceHandle }) => {
 	const updateNodeInternals = useUpdateNodeInternals();
 	const [positionStyle, setPositionStyle] = useState({});
 
-	const sourceHandle = `${node_id}-s-${containerId}`;
-	console.log("Node ID: ", node_id);
-	console.log("Source Handle:", sourceHandle);
+	//console.log("Node ID: ", node_id);
+	//console.log("Source Handle:", sourceHandle);
 
 	useEffect(() => {
 		// if (!containerId) {

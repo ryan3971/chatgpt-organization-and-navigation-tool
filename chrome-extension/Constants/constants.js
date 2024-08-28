@@ -73,3 +73,5 @@ export const REACT_GET_NODE_SPACE_KEYS = "react_get_node_space_keys";
 export const REACT_APP_MOUNTED = "react_app_mounted";
 export const GET_NODE_SPACE_DATA = "get_node_space_data";
 export const HANDLE_OPEN_NODE_CHAT = "handle_open_node_chat";
+export const REACT_UPDATE_NODE_SPACE_TITLE = "react_update_node_space_title";
+export const REACT_DELETE_NODE_SPACE = "react_delete_node_space";

@@ -164,7 +164,7 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 	// listen for clicks made outside of a node
 	useEffect(() => {
 		// Function to close the context menu when a click is detected outside
-		const handleOutsideClick = (e) => {
+		const handleOutsideClick = () => {
 			console.log("Clicked outside");
 		};
 
