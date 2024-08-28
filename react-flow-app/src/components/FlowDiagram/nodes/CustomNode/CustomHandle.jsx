@@ -25,15 +25,10 @@ const CustomHandle = ({ node_id, containerId, targetRef, sourceHandle }) => {
 					left: `${targetRect.left + targetRect.width / 2}px`, // Align center of handle
 					opacity: 0,
 				},
-				position: Position.Bottom,
-			});
-		} else {
-			setPositionStyle({
-				style: {},
-				position: {},
 			});
 		}
 		updateNodeInternals(node_id);
+		console.log("Updating node internals for node", node_id);
 	}, [targetRef, node_id, updateNodeInternals, containerId]);
 
 	
@@ -44,7 +39,7 @@ const CustomHandle = ({ node_id, containerId, targetRef, sourceHandle }) => {
 			key={sourceHandle}
 			id={sourceHandle}
 			type="source"
-			position={positionStyle.position}
+			position={Position.Bottom}
 			isConnectable
 		/>
 	);
