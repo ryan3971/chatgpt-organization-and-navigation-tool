@@ -7,13 +7,15 @@ import Title from "./NodeTitle";
 import MessageTable from "./MessageTable";
 import CustomHandle from "./CustomHandle";
 
-const CustomNode = ({ id, data }) => {
+const CustomNode = ({ id, data, selected }) => {
 	const { title, messages, selectedTextContainerIds, isParent } = data;
 	const refs = useRef({});
 
 	return (
 		<div
-			className="bg-gray-100 border border-gray-200 shadow-sm rounded-full min-w-[12rem]"
+			className={`${
+				selected ? "border-blue-300 shadow-lg border-3" : "border-gray-200 shadow-sm border"
+			} bg-gray-100 rounded-full min-w-[12rem]`}
 			onDoubleClick={() => console.log("Double clicked node", id)}
 		>
 			{/* Title */}
@@ -27,7 +29,6 @@ const CustomNode = ({ id, data }) => {
 
 			{/* Top Handle if node is a parent */}
 			{!isParent && (
-				console.log("Top handle for node", id),
 				<Handle
 					type="target"
 					position={Position.Top}
@@ -46,19 +47,22 @@ const CustomNode = ({ id, data }) => {
 
 			{/* Handles for branches */}
 			{selectedTextContainerIds.map((containerId, index) => {
-				console.log("Branch handle for container", containerId);
-				console.log("Branch index", index);
+				//console.log("Branch handle for container", containerId);
+				//console.log("Branch index", index);
 				let targetRef = null;
 				if (containerId) {
 					const columnIndex = Math.floor(containerId / 2);
 					targetRef = refs.current[columnIndex];
 				}
+				const sourceHandle = `${id}-s-${containerId}`;
+
 				return (
 					<CustomHandle
-						key={containerId}
+						key={sourceHandle}
 						node_id={id}
 						containerId={containerId}
 						targetRef={targetRef}
+						sourceHandle={sourceHandle}
 					/>
 				);
 			})}

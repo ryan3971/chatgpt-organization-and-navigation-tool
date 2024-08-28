@@ -23,8 +23,9 @@ export const transformStorageData = (storageData) => {
 		Object.keys(branches).forEach((branch_id) => {
 			const branch = branches[branch_id];
 
-			// Add the selected text container ID to the list
-			selectedTextContainerIds.push(branch.selectedTextContainerId);
+			// Add the selected text container ID to the list if it is not already there
+			if (!selectedTextContainerIds.includes(branch.selectedTextContainerId))
+				selectedTextContainerIds.push(branch.selectedTextContainerId);
 
 			// Create the eges that will connect to this node 
 			const sourceHandle = `${node_id}-s-${branch.selectedTextContainerId}`;
@@ -35,8 +36,8 @@ export const transformStorageData = (storageData) => {
 				id: sourceHandle,
 			});
 
-			console.log("Edge Source Handle:", sourceHandle);
-			console.log("Edge Target Handle:", targetHandle);
+		//	console.log("Edge Source Handle:", sourceHandle);
+		//	console.log("Edge Target Handle:", targetHandle);
 
 			const new_edge = {
 				id: `${node_id}-${branch_id}`,
@@ -47,7 +48,8 @@ export const transformStorageData = (storageData) => {
 				targetHandle: targetHandle,
 				data: {
 					selectedText: branch.selectedText,
-					isMessageOverwritten: branch.isMessageOverwritten
+					isMessageOverwritten: branch.isMessageOverwritten,
+					isSelected: false,
 				},
 			};
 

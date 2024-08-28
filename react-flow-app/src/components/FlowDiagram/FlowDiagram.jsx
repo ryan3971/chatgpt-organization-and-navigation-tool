@@ -1,6 +1,16 @@
 /*global chrome*/
-import { Background, Controls, MiniMap, ReactFlow, useEdgesState, useNodesState, useReactFlow } from "@xyflow/react";
-import { useEffect, useRef, useCallback } from "react";
+import {
+	Background,
+	Controls,
+	MiniMap,
+	ReactFlow,
+	useEdgesState,
+	useNodesState,
+	useReactFlow,
+	getConnectedEdges,
+	useOnSelectionChange,
+} from "@xyflow/react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "@xyflow/react/dist/style.css";
 
 import CustomNode from "./nodes/CustomNode/CustomNode";
@@ -18,7 +28,7 @@ import { sendMessageToBackground } from "../../util/chromeMessagingService";
 import "@xyflow/react/dist/style.css";
 import useLayout from "../../hooks/useLayout";
 
-import { showToast } from '../toast/toastService'; // Ensure the correct path to your toast function
+import { showToast } from "../toast/toastService"; // Ensure the correct path to your toast function
 
 const nodeTypes = {
 	"custom-node": CustomNode,
@@ -36,6 +46,8 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 	const [menu, { onNodeContextMenu, onCloseContextMenu }] = useNodeContextMenu(ref, null);
 	const [layout] = useLayout(); // Use the updated hook
 	const { fitView } = useReactFlow();
+
+	const [selectedNodes, setSelectedNodes] = useState([]);
 
 	const onInit = useCallback(() => {
 		// Update the diagram with the new data
@@ -96,6 +108,46 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 
 	// Listen for changes in Chrome storage
 
+	// the passed handler has to be memoized, otherwise the hook will not work correctly
+	// For nodes, returns an array of selected nodes (either empty or selected node)
+	// Code is a little ugly and confusing but it works
+	const onChange = useCallback(({ nodes }) => {
+
+		console.log("useOnSelectionChange")
+
+		function updateSelectedEdges(updatedEdges, connectedEdges, isEdgeSelected) {
+			return updatedEdges.map((edge) => {
+				if (connectedEdges.some((connect) => connect.id === edge.id)) {
+					return {
+						...edge,
+						data: {
+							...edge.data,
+							isSelected: isEdgeSelected,
+						},
+					};
+				}
+				return edge;
+			});
+		}
+		// Reset the previously selected edges
+		let connectedEdges = getConnectedEdges(selectedNodes, edges); // Get the edges connected to the previously selected nodes
+		let updatedEdges = updateSelectedEdges(edges, connectedEdges, false); // Deselect those edges
+
+		// Select the newly selected edges
+		connectedEdges = getConnectedEdges(nodes, edges); // Get the edges connected to the newly selected nodes
+		updatedEdges = updateSelectedEdges(updatedEdges, connectedEdges, true); // Select those edges
+
+		setEdges(updatedEdges); // Finally, update the edges state with all modifications
+		setSelectedNodes(nodes);
+	},
+		[selectedNodes, edges, setEdges, setSelectedNodes]
+	);
+
+	useOnSelectionChange({
+		onChange,
+	});
+
+	// Update the diagram when the layout changes
 	useEffect(() => {
 		if (layout) {
 			setNodes(layout.nodes);
@@ -104,10 +156,26 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 			window.requestAnimationFrame(() => {
 				fitView({ padding: 0.2, maxZoom: 10 });
 			});
+			console.log("Nodes: ", layout.nodes);
+			console.log("Edges: ", layout.edges);
 		}
 	}, [layout, fitView, setNodes, setEdges]);
 
+	// listen for clicks made outside of a node
+	useEffect(() => {
+		// Function to close the context menu when a click is detected outside
+		const handleOutsideClick = (e) => {
+			console.log("Clicked outside");
+		};
 
+		// Listen for mousedown events
+		window.addEventListener("mousedown", handleOutsideClick, true);
+
+		// Cleanup the event listener on component unmount
+		return () => {
+			document.removeEventListener("mousedown", handleOutsideClick, true);
+		};
+	}, [onCloseContextMenu]);
 
 	return (
 		<div className="w-screen h-screen">
