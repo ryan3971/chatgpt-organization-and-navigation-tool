@@ -12,10 +12,9 @@ export default function useLayout() {
 	const [layout, setLayout] = useState({ nodes: [], edges: [] });
 
 	useEffect(() => {
-		console.log("Nodes initialized", nodesInitialized);
-
-		const layoutNodes = async () => {
-			if (nodesInitialized) {
+		if (nodesInitialized) {
+			console.log("Nodes initialized", nodesInitialized);
+			const layoutNodes = async () => {
 				const currentNodes = getNodes();
 				const currentEdges = getEdges();
 
@@ -23,10 +22,9 @@ export default function useLayout() {
 				const layoutedNodes = await getLayoutedNodes(currentNodes, currentEdges);
 
 				setLayout({ nodes: layoutedNodes, edges: currentEdges });
-			}
-		};
-
-		layoutNodes(); // Trigger the async layout function when nodes are initialized
+			};
+			layoutNodes(); // Trigger the async layout function when nodes are initialized
+		}
 	}, [nodesInitialized, getNodes, getEdges]);
 
 	return [layout];

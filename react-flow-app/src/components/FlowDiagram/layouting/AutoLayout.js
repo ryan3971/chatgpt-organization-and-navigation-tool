@@ -35,7 +35,7 @@ export const getLayoutedNodes = async (nodes, edges) => {
 				},
 			}));
 
-			console.log("node.data.sourceHandles", node.data.sourceHandles);
+			// console.log("node.data.sourceHandles", node.data.sourceHandles);
 
 			const sourcePorts = node.data.sourceHandles.map((sourcePort) => ({
 				id: sourcePort.id,
