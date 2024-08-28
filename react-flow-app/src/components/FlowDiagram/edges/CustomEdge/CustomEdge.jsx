@@ -1,7 +1,7 @@
-import { BaseEdge, getBezierPath, EdgeLabelRenderer } from "@xyflow/react";
+import { BaseEdge, getBezierPath, getSmoothStepPath, EdgeLabelRenderer, Position } from "@xyflow/react";
 
 export default function CustomEdge({ id, sourceX, sourceY, targetX, targetY, data }) {
-	const { isMessageOverwritten } = data;
+	const { isMessageOverwritten, isSelected } = data;
 	const [edgePath, labelX, labelY] = getBezierPath({
 		sourceX,
 		sourceY,
@@ -14,17 +14,34 @@ export default function CustomEdge({ id, sourceX, sourceY, targetX, targetY, dat
 			<BaseEdge
 				id={id}
 				path={edgePath}
-				className={`${isMessageOverwritten ? "stroke-red-600" : "stroke-black"} stroke-1`}
+				className={`${isMessageOverwritten ? "stroke-red-600" : "stroke-black"} ${isSelected ? "stroke-2" : "stroke-1"}`}
 			/>
 			<EdgeLabelRenderer>
 				<div
-					className="opacity-100 bg-orange-50 px-2 rounded-3xl text-center font-semibold text-sm"
+					className={`${
+						isSelected
+							? "opacity-100 bg-orange-50 px-2 rounded-3xl text-center font-semibold text-sm overflow-y-auto max-w-50"
+							: ""
+					}`}
 					style={{
 						position: "absolute",
-						transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+						transform: `translate(-50%, -100%) translate(${targetX}px,${targetY}px)`,
 					}}
 				>
-					{data.selectedText}
+					{isSelected ? (
+						<span>{data.selectedText}</span>
+					) : (
+						<svg
+							width="10"
+							height="10"
+							viewBox="0 0 10 10"
+						>
+							<polygon
+								points="5,0 10,5 5,10 0,5"
+								fill="black"
+							/>
+						</svg>
+					)}
 				</div>
 			</EdgeLabelRenderer>
 		</>
