@@ -60,6 +60,7 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		node_type: null,
 		node_space_id: null,
 		node_id: null,
+		node_title: null,
 		selected_text_data: null,
 	};
 
@@ -89,17 +90,25 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 			// Node exists
 			console.warn("Node exists");
 			message.node_type = Constants.NODE_TYPE_EXISTING;
-			const { node_space_id, node_id } = response;
+			const { node_space_id, node_id, node_title } = response;
 			message.node_space_id = node_space_id;
 			message.node_id = node_id;
+			message.node_title = node_title;
 		}
 	}
 
 	// Send the node data to the content script
-	response = await sendMessage(tabId, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, message);
+	response = await sendMessage(tabId, Constants.SYNC_WITH_CONTENT_SCRIPT, message);
 	if (!response.status) {
 		console.error("Error updating content script temp data");
 		return;
+	} else if (response.data) {
+		const { node_id, node_title } = response.data;
+
+		response = await updateNodeTitle(node_id, node_title);
+		if (!response) {
+			console.error("Error updating node title. Bummer.");
+		}
 	}
 
 	// if this is a chat navigated to from the react app, scroll to the message index
@@ -242,7 +251,7 @@ async function createParentNode(info, tab) {
 	node_data.node_space_id = node_space_id;
 	node_data.node_id = node_id;
 
-	response = await sendMessage(tab.id, Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA, node_data);
+	response = await sendMessage(tab.id, Constants.SYNC_WITH_CONTENT_SCRIPT, node_data);
 	if (!response.status) {
 		notifyUser(Constants.ERROR, "Error updating the parent node data");
 		return;

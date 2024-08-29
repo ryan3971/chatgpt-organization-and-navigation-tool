@@ -198,7 +198,14 @@ async function createNewBranchNode(navPanel) {
 	const nodeId = url.pathname;
 
 	const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + nodeId + HTML_GENERIC_CLOSING;
-	const nodeTitle = navPanel.querySelector(nodeHref).innerText; // potential race condition between this and the the nav field being created
+
+	// try to get the title now, if it fails, it will be tried again later (nav panel may not have updated yet)
+	let nodeTitle = "ChatGPT Chat";
+	try {
+		nodeTitle = navPanel.querySelector(nodeHref).innerText; // potential race condition between this and the the nav field being created
+	} catch (error) {
+		console.error("Error getting node title from nav panel", error);
+	}
 
 	const data = {
 		node_id: nodeId,
@@ -218,6 +225,26 @@ async function createNewBranchNode(navPanel) {
 
 	return true;
 }
+
+// function getNodeTitle(node_id)	{
+
+// 	if (tempStorage.node_title) {
+// 		return tempStorage.node_title;
+// 	}
+// 	const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
+// 	// const url = new URL(window.location.href);
+// 	// const nodeId = url.pathname;
+// 	const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + node_id + HTML_GENERIC_CLOSING;
+
+// 	let nodeTitle = null;
+// 	try	{
+// 		nodeTitle = navPanel.querySelector(nodeHref).innerText; // potential race condition between this and the the nav field being created
+// 	} catch (error) {
+// 		console.error("Error getting node title from nav panel", error);
+// 	}
+	
+// 	return nodeTitle;
+// }
 
 // Function to extract conversation text and save it
 function getNodeMessages() {
@@ -384,8 +411,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				break;
 			case Constants.GET_NODE_TITLE:
 				console.log("Received message to get node title");
+				const nodeTitle = tempStorage.node_title  || document.title || "ChatGPT Chat";
 				response.status = true;
-				response.data = tempStorage.node_title || document.title || "ChatGPT Title";
+				response.data = nodeTitle;
 				sendResponse(response);
 				break;
 			case Constants.GET_NODE_DATA:
@@ -394,13 +422,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				response.data = tempStorage;
 				sendResponse(response);
 				break;
-			case Constants.UPDATE_CONTENT_SCRIPT_TEMP_DATA:
+			case Constants.SYNC_WITH_CONTENT_SCRIPT:
 				console.log("Received message to update content script temp data");
 				data = request.data;
 				tempStorage.node_type = data.node_type;
 				tempStorage.node_space_id = data.node_space_id;
+				tempStorage.node_title = data.node_title;
 				tempStorage.node_id = data.node_id;
 				tempStorage.selected_text_data = data.selected_text_data;
+
+				// sync with the chat node title
+				if (data.node_type === Constants.NODE_TYPE_EXISTING) {
+					if (document.title !== data.node_title) {
+						response.data = { node_id: data.node_id, node_title: document.title };
+					}
+				}
 				response.status = true;
 				sendResponse(response);
 				break;
