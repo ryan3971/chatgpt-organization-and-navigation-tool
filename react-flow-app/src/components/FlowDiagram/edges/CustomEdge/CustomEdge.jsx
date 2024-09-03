@@ -44,7 +44,7 @@ export default function CustomEdge({ id, sourceX, sourceY, targetX, targetY, dat
 					}`}
 					style={{
 						position: "absolute",
-						transform: `translate(-50%, -100%) translate(${labelX}px, ${labelY}px)`,
+						transform: `translate(-50%, -100%) translate(${targetX}px, ${targetY}px)`,
 					}}
 				>
 					{/* Show the text when an edge is selected and render a diamond shape when the edge is not selected */}

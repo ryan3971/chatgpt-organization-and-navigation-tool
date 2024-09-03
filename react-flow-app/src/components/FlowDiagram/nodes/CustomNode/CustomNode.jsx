@@ -14,8 +14,12 @@ import * as Constants from "../../../../util/constants";
 const CustomNode = ({ id, data, selected }) => {
 	const { title, messages, selectedTextContainerIds, isParent } = data;
 	const refs = useRef({});
+	const rerenderHandleRef = useRef([]); // Ref to trigger re-renders
 
 	const updateNodeInternals = useUpdateNodeInternals();
+
+	console.log("CustomNode rendering for node", id);
+	console.log("Value of refs in CustomNode: ", refs);
 
 	// Effect to update the node internals when the node is mounted or its ID changes
 	useEffect(() => {
@@ -87,6 +91,8 @@ const CustomNode = ({ id, data, selected }) => {
 				const columnIndex = Math.floor(containerId / 2);
 				const targetRef = refs.current[columnIndex];
 				const sourceHandle = `${id}-s-${containerId}`;
+
+				console.log("Creating handle for container", containerId);
 
 				return (
 					<CustomHandle

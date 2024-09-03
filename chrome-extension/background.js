@@ -20,7 +20,7 @@ import * as Constants from "./Constants/constants.js";
 let state = {
 	isNewBranchNode: false,
 	reactWindowId: null,
-	navigatedChat: { tabId: null, messageIndex: null },
+	navigatedChat: { tab: null, messageIndex: null },
 	storageChange: false,
 	lastActiveChatTabId: null,
 };
@@ -39,7 +39,7 @@ chrome.tabs.onUpdated.addListener(handleTabUpdate);
 async function handleTabUpdate(tabId, changeInfo, tab) {
 	try {
 		if (changeInfo.status !== "complete") return; // Wait for the page to load completely
-
+		console.log("Tab updated:", changeInfo.status);
 		// New webpage open, is it ChatGPT?
 		const url = new URL(tab.url);
 		const hostname = url.hostname; // e.g., chatgpt.com
@@ -109,10 +109,10 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		}
 
 		// Scroll to the message index if navigating from the React app
-		if (state.navigatedChat.tabId === tabId) {
+		if (state.navigatedChat.tab === tabId) {
 			console.log("Navigating to message index:", state.navigatedChat.messageIndex);
-			navigateToNodeChatCallback(state.navigatedChat.tabId, state.navigatedChat.messageIndex);
-			state.navigatedChat = { tabId: null, messageIndex: null };
+			navigateToNodeChatCallback(state.navigatedChat.tab, state.navigatedChat.messageIndex);
+			state.navigatedChat = { tab: null, messageIndex: null };
 
 		}
 	} catch (error) {
@@ -409,7 +409,7 @@ function handleTextSelectionError(errorCode) {
 async function createBranchChat(node_data, data, tab_id) {
 	try {
 		// Create a new node object and associated objects
-		const { node_space_id, parent_node_id, selected_text_data } = node_data;
+		const { node_space_id, node_id: parent_node_id, selected_text_data } = node_data;
 		const { node_id: branch_node_id, node_title: branch_node_title } = data;
 
 		const response = await createNewNodeBranch(
@@ -567,7 +567,7 @@ async function handleOpenNodeChat(node_id, message_index) {
 			// Open a new tab and handle navigation after the tab is created
 			chrome.tabs.create({ url: `${Constants.CHATGPT_ORIGIN}${node_id}` }, (newTab) => {
 				// Save the tab id and message index to navigate to after the tab is created
-				state.navigatedChat = { tabId: newTab.id, messageIndex: message_index };
+				state.navigatedChat = { tab: newTab, messageIndex: message_index };
 			});
 		}
 

@@ -37,17 +37,12 @@ const App = () => {
 					return;
 				}
 
-				if (!response.data) {
-					console.warn("No Node Spaces data available");
-					return;
-				}
-
 				// Extract node space data from the response
 				console.log("Received data from background script:", response.data);
 				const { node_space_keys, active_node_space } = response.data;
-
+				
 				// Update state with received node spaces and active space
-				setSpaces(node_space_keys);
+				setSpaces(node_space_keys || []);
 				setActiveSpace(active_node_space);
 			})
 			.catch((error) => {

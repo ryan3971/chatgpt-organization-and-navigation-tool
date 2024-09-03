@@ -4,6 +4,8 @@ import { useRef } from "react";
 const Title = ({ title }) => {
 	const titleRef = useRef(null); // Reference to the title div
 
+	console.log("Title rendering");
+
 	return (
 		<div
 			ref={titleRef}
