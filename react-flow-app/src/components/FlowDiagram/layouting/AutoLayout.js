@@ -1,5 +1,6 @@
 import ELK from "elkjs";
 
+// Layout options for the ELK layout algorithm
 const layoutOptions = {
 	"elk.algorithm": "layered",
 	"elk.direction": "DOWN",
@@ -7,30 +8,27 @@ const layoutOptions = {
 	"elk.spacing.nodeNode": "100",
 	"elk.spacing.edgeNode": "100",
 	"elk.layered.spacing.nodeNodeBetweenLayers": "100",
-
 	"elk.layered.nodePlacement.strategy": "SIMPLE",
 	"elk.portConstraints": "FIXED_ORDER", // Ensures ports have defined sides
-
-
-	//"elk.spacing.edgeEdge": "100",
-
-	//"elk.layered.spacing.nodeNode": 30,
-	//"elk.layered.layering.strategy": "INTERACTIVE",
-	//"elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-	//"elk.edgeRouting": "ORTHOGONAL",
-	// "elk.hierarchyHandling": "INCLUDE_CHILDREN",
-	//"elk.layered.nodePlacement.bk.edgeCrossing.minimize": "true", // Minimize edge crossings
 };
 
 const elk = new ELK();
 
-// Function to layout the nodes using ELK
+/**
+ * Function to layout the nodes using ELK
+ * @param {Array} nodes - The array of nodes to be laid out
+ * @param {Array} edges - The array of edges connecting the nodes
+ * @returns {Promise<Array>} - A promise that resolves to the laid-out nodes
+ */
 export const getLayoutedNodes = async (nodes, edges) => {
-	console.log("Autolayouting Nodes: ", nodes);
+	console.log("Starting auto-layout of nodes:", nodes);
+
+	// Construct the graph object required by ELK
 	const graph = {
 		id: "root",
 		layoutOptions,
 		children: nodes.map((node) => {
+			// Map target and source handles to ELK ports
 			const targetPorts = node.data.targetHandles.map((targetPort) => ({
 				id: targetPort.id,
 				properties: {
@@ -38,24 +36,20 @@ export const getLayoutedNodes = async (nodes, edges) => {
 				},
 			}));
 
-			// console.log("node.data.sourceHandles", node.data.sourceHandles);
-
 			const sourcePorts = node.data.sourceHandles.map((sourcePort) => ({
 				id: sourcePort.id,
 				properties: {
 					side: "SOUTH",
 				},
-
 			}));
 
 			return {
 				id: node.id,
-				width: node.measured.width ?? 200,
-				height: node.measured.height ?? 100,
+				width: node.measured.width ?? 200, // Default width if not measured
+				height: node.measured.height ?? 100, // Default height if not measured
 				ports: [...targetPorts, ...sourcePorts],
 			};
 		}),
-
 		edges: edges.map((edge) => ({
 			id: edge.id,
 			sources: [edge.sourceHandle || edge.source],
@@ -63,11 +57,14 @@ export const getLayoutedNodes = async (nodes, edges) => {
 		})),
 	};
 
+	// Perform the layout using ELK
 	const layoutedGraph = await elk.layout(graph);
 
+	// Map the layouted positions back to the original nodes
 	const layoutedNodes = nodes.map((node) => {
 		const layoutedNode = layoutedGraph.children?.find((layoutedGraphNode) => layoutedGraphNode.id === node.id);
-		console.log("End of Auto Layouted Node: ", layoutedNode);
+		console.log("Finished auto-layout for node:", layoutedNode);
+
 		return {
 			...node,
 			position: {

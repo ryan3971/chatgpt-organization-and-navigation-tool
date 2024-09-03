@@ -1,41 +1,39 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
-const CustomHandle = ({ node_id, containerId, targetRef, sourceHandle }) => {
+const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle }) => {
 	const updateNodeInternals = useUpdateNodeInternals();
 	const [positionStyle, setPositionStyle] = useState({});
 
-	//console.log("Node ID: ", node_id);
-	//console.log("Source Handle:", sourceHandle);
-
+	// useEffect to calculate and set the position of the handle relative to its target element
+	// This effect runs when the component mounts and whenever the targetRef, node_id, or containerId changes.
 	useEffect(() => {
-		// if (!containerId) {
-		// 	setPositionStyle({
-		// 		style: {opacity: 0},
-		// 		position: Position.Right,
-		// 	});
 		if (targetRef && targetRef.current) {
-			// Get the bounding box of the target (e.g., the button)
+			// Get the bounding box of the target element (e.g., a button)
 			const targetRect = targetRef.current.getBoundingClientRect();
-			//const parentRect = targetRef.current.offsetParent.getBoundingClientRect();
+			const parentRect = targetRef.current.offsetParent.getBoundingClientRect();
 
-			// Calculate the handle position based on the target element's position
+			// Calculate the width percentage of the target relative to its parent
+			const columnPercent = targetRect.width / parentRect.width;
+			console.log("Column Percent in CustomHandle: ", columnPercent);
+
+			// Calculate the handle's position as a percentage of the parent's width
 			setPositionStyle({
-				style: {
-					left: `${targetRect.left + targetRect.width / 2}px`, // Align center of handle
-					opacity: 0,
-				},
+				left: `${(columnPercent * containerId + columnPercent / 2) * 100}%`, // Adjust to parent's position
+				opacity: 0,
+				width: 0, // Ensures the handle is invisible
+				height: 0, // Ensures the handle is invisible
 			});
-		}
-		updateNodeInternals(node_id);
-		console.log("Updating node internals for node", node_id);
-	}, [targetRef, node_id, updateNodeInternals, containerId]);
 
-	
+			// Trigger an update of the node's internals after positioning the handle
+			updateNodeInternals(node_id);
+		}
+	}, [targetRef, node_id, containerId, updateNodeInternals]);
+
 	return (
 		<Handle
 			className="bg-dark rounded-circle"
-			style={positionStyle.style}
+			style={positionStyle}
 			key={sourceHandle}
 			id={sourceHandle}
 			type="source"

@@ -1,20 +1,19 @@
 import { useState, useRef } from "react";
 import ReactDOM from "react-dom";
-
 import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
 import * as Constants from "../../../../util/constants";
-
 import { showToast } from "../../../toast/toastService"; // Ensure the correct path to your toast function
 
 const MessageButton = ({ node_id, message, message_index, style }) => {
 	const [showTooltip, setShowTooltip] = useState(false);
 	const [tooltipPosition, setTooltipPosition] = useState({ top: -9999, left: -9999 });
-	const [tooltipPlacement, setTooltipPlacement] = useState("top"); // Tracks whether the tooltip is above or below the button
-	const [tooltipReady, setTooltipReady] = useState(false); // To control when to show the tooltip after positioning
+	const [tooltipPlacement, setTooltipPlacement] = useState("top"); // Tracks tooltip placement (top/bottom)
+	const [tooltipReady, setTooltipReady] = useState(false); // Controls when the tooltip is ready to show
 	const buttonRef = useRef(null);
-	const tooltipRef = useRef(null); // Ref for the tooltip
+	const tooltipRef = useRef(null);
 	const timeoutRef = useRef(null);
 
+	// Handle button click to send a message to the background script
 	const handleButtonClick = () => {
 		console.log(`User button clicked at index ${message_index}:`);
 
@@ -23,95 +22,102 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 			message_index: message_index,
 		};
 
-		// send a message to the chrome background script to open a chat window
-		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data).then((response) => {
-			if (!response.status) {
-				showToast("Error opening chat", { type: "error" });
-				return;
-			}
-			console.log("Message sent to background script");
-		});
+		// Hide the tooltip when the button is clicked
+		setShowTooltip(false);
+		setTooltipReady(false);
+
+		// Send a message to the background script to open the chat
+		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data)
+			.then((response) => {
+				if (!response.status) {
+					showToast("Error opening chat", { type: "error" });
+					return;
+				}
+				console.log("Message sent to background script");
+			})
+			.catch((error) => {
+				console.error("Error opening chat:", error);
+				showToast("An unexpected error occurred", { type: "error" });
+			});
 	};
 
+	// Handle mouse entering the button to display the tooltip
 	const handleMouseEnter = () => {
-		// Show the tooltip off-screen for measurement
+		// Prepare the tooltip for display
 		setTooltipReady(true);
 
-		// Delay the actual showing of the tooltip to allow time for measurement
+		// Delay the tooltip display for positioning purposes
 		timeoutRef.current = setTimeout(() => {
 			const buttonRect = buttonRef.current.getBoundingClientRect();
-			const tooltipRect = tooltipRef.current.getBoundingClientRect(); // Get tooltip dimensions dynamically
+			const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-			// Calculate default tooltip position above the button
-			let calculatedTop = buttonRect.top - 10; // Position above the button
-			let placement = "top"; // Assume top placement by default
+			// Calculate vertical position and handle edge cases
+			let calculatedTop = buttonRect.top - 10;
+			let placement = "top";
 
-			// Check if the tooltip would go out of the viewport above
+			// Check if tooltip would go out of viewport above
 			if (calculatedTop - tooltipRect.height < 0) {
-				// If the tooltip would go out of the viewport at the top, place it below
-				calculatedTop = buttonRect.bottom + 10; // Position below the button
+				calculatedTop = buttonRect.bottom + 10; // Place tooltip below
 				placement = "bottom";
 			} else if (buttonRect.bottom + tooltipRect.height > window.innerHeight) {
-				// If the tooltip would go out of the viewport at the bottom, place it above
-				calculatedTop = buttonRect.top - 10; // Position above the button
+				calculatedTop = buttonRect.top - 10; // Keep it above
 				placement = "top";
 			}
 
 			// Calculate horizontal position
 			let calculatedLeft = buttonRect.left + buttonRect.width / 2;
 
-			// Ensure the tooltip does not go beyond the left edge of the viewport
+			// Adjust horizontal position to prevent overflow on the left side
 			if (calculatedLeft - tooltipRect.width / 2 < 0) {
-				calculatedLeft = tooltipRect.width / 2 + 10; // Align to the left edge
+				calculatedLeft = tooltipRect.width / 2 + 10;
 			}
 
-			// Ensure the tooltip does not go beyond the right edge of the viewport
+			// Adjust horizontal position to prevent overflow on the right side
 			if (calculatedLeft + tooltipRect.width / 2 > window.innerWidth) {
-				calculatedLeft = window.innerWidth - tooltipRect.width / 2 - 10; // Align to the right edge
+				calculatedLeft = window.innerWidth - tooltipRect.width / 2 - 10;
 			}
 
-			// Set tooltip position and placement state
-			setTooltipPosition({
-				top: calculatedTop,
-				left: calculatedLeft,
-			});
+			// Set tooltip position and show it
+			setTooltipPosition({ top: calculatedTop, left: calculatedLeft });
 			setTooltipPlacement(placement);
-			setShowTooltip(true); // Finally, show the tooltip after positioning
-		}, 400); // Delay for measurement and positioning
+			setShowTooltip(true);
+		}, 400); // Small delay for positioning
 	};
 
+	// Handle mouse leaving the button to hide the tooltip
 	const handleMouseLeave = () => {
-		clearTimeout(timeoutRef.current); // Clear the delay if the user moves the mouse away before it shows
-		// Hide the tooltip if the mouse is not over it
+		clearTimeout(timeoutRef.current); // Cancel the delayed tooltip display
 		setTimeout(() => {
 			if (!tooltipRef.current?.matches(":hover") && !buttonRef.current?.matches(":hover")) {
 				setShowTooltip(false);
-				setTooltipReady(false); // Hide the tooltip off-screen when not in use
+				setTooltipReady(false);
 			}
 		}, 100);
 	};
 
+	// Handle tooltip leave event to hide it
 	const handleTooltipLeave = () => {
 		setTimeout(() => {
 			if (!tooltipRef.current?.matches(":hover") && !buttonRef.current?.matches(":hover")) {
 				setShowTooltip(false);
-				setTooltipReady(false); // Hide the tooltip off-screen when not in use
+				setTooltipReady(false);
 			}
 		}, 100);
 	};
 
+	// Tooltip component (conditionally rendered when ready)
 	const Tooltip = tooltipReady ? (
 		<div
 			ref={tooltipRef}
 			className="fixed bg-orange-100 rounded-lg px-3 py-2 w-[20rem] max-h-[10rem] overflow-y-auto shadow-lg text-s text-center"
 			style={{
-				top: `${tooltipPosition.top}px`, // Use the calculated top position
-				left: `${tooltipPosition.left}px`, // Use the calculated left position
-				transform: "translateX(-50%)" + (tooltipPlacement === "top" ? " translateY(-100%)" : ""),
-				visibility: showTooltip ? "visible" : "hidden", // Hide the tooltip until it's positioned
+				top: `${tooltipPosition.top}px`,
+				left: `${tooltipPosition.left}px`,
+				transform: `translateX(-50%)${tooltipPlacement === "top" ? " translateY(-100%)" : ""}`,
+				visibility: showTooltip ? "visible" : "hidden",
 			}}
-			onMouseEnter={() => clearTimeout(timeoutRef.current)} // Stop hiding when hovering the tooltip
-			onMouseLeave={handleTooltipLeave} // Hide when leaving the tooltip
+			onMouseEnter={() => clearTimeout(timeoutRef.current)} // Prevent hiding when hovering over tooltip
+			onMouseLeave={handleTooltipLeave} // Handle mouse leave on tooltip
 		>
 			{message}
 		</div>
@@ -127,6 +133,7 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 				onMouseLeave={handleMouseLeave}
 			></button>
 
+			{/* Render the tooltip using a portal to the body */}
 			{ReactDOM.createPortal(Tooltip, document.body)}
 		</>
 	);

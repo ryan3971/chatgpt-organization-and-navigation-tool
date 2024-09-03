@@ -1,362 +1,393 @@
-import { getFromStorage, setToStorage, removeFromStorage } from "../shared/services/chromeStorageService.js";
+import { getFromStorage, setToStorage, removeFromStorage } from "../services/chromeStorageService.js";
 import * as Constants from "../Constants/constants.js";
 
 /****** General Functions ******/
+export async function doesNodeExist(node_id) {
+	try {
+		const node_spaces_keys = await getFromStorage(Constants.NODE_SPACES_KEY);
+		if (!node_spaces_keys) return false;
 
-export async function doesNodeExist(node_id)    {
-	// First, get from storage the node spaces
-	const node_spaces_keys = await getFromStorage(Constants.NODE_SPACES_KEY);
-	if (!node_spaces_keys) return false; // false if node_spaces is undefined or false
-    
-	// Iterate through the node spaces and get the key to the nodes within them
-	for (const node_space_key in node_spaces_keys) {
-		const nodes = await getFromStorage(node_space_key);
-
-        // If nodes is undefined, continue to the next node space
-        if (!nodes) {
-            console.error("Nodes not found in storage. This should not happen.");
-            continue;
-        }
-
-        // Check if the key exists in the nodes
-        if (node_id in nodes) {
-            return {
-                node_space_id: node_space_key,
-                node_id: node_id,
-            };
-        }
+		for (const node_space_key in node_spaces_keys) {
+			const nodes = await getFromStorage(node_space_key);
+			if (!nodes) {
+				console.error("Nodes not found in storage. This should not happen.");
+				continue;
+			}
+			if (node_id in nodes) {
+				return {
+					node_space_id: node_space_key,
+					node_id: node_id,
+					node_title: nodes[node_id].title,
+				};
+			}
+		}
+		return false;
+	} catch (error) {
+		console.error("Error in doesNodeExist:", error);
+		return false;
 	}
-	return false;
 }
+
 
 /***** Create New Storage Objects *****/
 export async function createNewNodeSpace(node_space_title) {
-	const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+	try {
+		const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
 
-	if (nodeSpacesKeys === false) {
+		// Generate a new node space ID
+		const nodeSpaceId = generateRandomId();
+
+		// Initialize the node space object to save
+		let savedNodeSpaces;
+		if (nodeSpacesKeys === null) {
+			const nodeSpace = {};
+			nodeSpace[nodeSpaceId] = { title: node_space_title };
+			savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpace);
+		} else if (nodeSpacesKeys !== false) {
+			nodeSpacesKeys[nodeSpaceId] = { title: node_space_title };
+			savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
+		} else {
+			console.error("Node spaces not found in storage");
+			return false;
+		}
+
+		if (!savedNodeSpaces) {
+			console.error("Failed to save new node space to storage");
+			return false;
+		}
+		return nodeSpaceId;
+	} catch (error) {
+		console.error("Error in createNewNodeSpace:", error);
 		return false;
 	}
-	// create a new node space id
-	const nodeSpaceId = generateRandomId();
-
-	// save the new node space id
-	var savedNodeSpaces;
-	if (nodeSpacesKeys === null) {
-        const nodeSpace = {}
-        nodeSpace[nodeSpaceId] = { title: node_space_title };
-		savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpace);
-	} else {
-		nodeSpacesKeys[nodeSpaceId] = nodeSpace;
-		savedNodeSpaces = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
-	}
-
-	if (!savedNodeSpaces) {
-		console.error("Node spaces not saved to storage");
-		return false;
-	}
-	return nodeSpaceId;
 }
+
 
 export async function createNewNodeParent(node_id, node_title) {
-    
-    // Create a new node space
-    const nodeSpaceId = await createNewNodeSpace(node_title);
-    if (!nodeSpaceId) {
-        console.error("Node space not created");
-        return false;
-    }
-    
-    const newParentNode = {
-        title: node_title,
-        isParent: true,
-        messages: [],
-        branches: {},
-	};
+	try {
+		// Create a new node space
+		const nodeSpaceId = await createNewNodeSpace(node_title);
+		if (!nodeSpaceId) {
+			console.error("Failed to create new node space");
+			return false;
+		}
 
-    var nodeObject  = {};
-    nodeObject[node_id] = newParentNode;
-    
-    const savedNode = await setToStorage(nodeSpaceId, nodeObject);
+		// Initialize the new parent node
+		const newParentNode = {
+			title: node_title,
+			isParent: true,
+			messages: [],
+			branches: {},
+		};
 
-    if (!savedNode) {
-		console.error("Nodes, nodes properties, nodes messages, edges, or edges properties not saved to storage");
+		const nodeObject = {};
+		nodeObject[node_id] = newParentNode;
+
+		// Save the new parent node to storage
+		const savedNode = await setToStorage(nodeSpaceId, nodeObject);
+		if (!savedNode) {
+			console.error("Failed to save new parent node to storage");
+			return false;
+		}
+		return nodeSpaceId;
+	} catch (error) {
+		console.error("Error in createNewNodeParent:", error);
 		return false;
 	}
-    return nodeSpaceId;
 }
+
 
 export async function createNewNodeBranch(node_space_id, parent_node_id, selected_text_data, branch_node_id, branch_node_title) {
-	// get the nodes from storage
-	const spaceNodes = await getFromStorage(node_space_id);
-    if (!spaceNodes) {
-		console.error("Nodes not found in storage");
+	try {
+		const spaceNodes = await getFromStorage(node_space_id);
+		if (!spaceNodes) {
+			console.error("Nodes not found in storage");
+			return false;
+		}
+
+		const parentNode = spaceNodes[parent_node_id];
+		if (!parentNode) {
+			console.error("Parent node not found in storage");
+			return false;
+		}
+
+		// Update the parent node with new branch data
+		const branchData = {
+			selectedText: selected_text_data.selectedText,
+			selectedTextContainerId: selected_text_data.selectedTextContainerId,
+			isMessageOverwritten: false,
+		};
+		parentNode.branches[branch_node_id] = branchData;
+		spaceNodes[parent_node_id] = parentNode;
+
+		// Initialize the new branch node
+		const newBranchNode = {
+			title: branch_node_title,
+			isParent: false,
+			messages: [],
+			branches: {},
+		};
+		spaceNodes[branch_node_id] = newBranchNode;
+
+		// Save the updated nodes to storage
+		const savedSpaceNodes = await setToStorage(node_space_id, spaceNodes);
+		if (!savedSpaceNodes) {
+			console.error("Failed to save branch node to storage");
+			return false;
+		}
+		return true;
+	} catch (error) {
+		console.error("Error in createNewNodeBranch:", error);
 		return false;
 	}
-
-    // get the parent node
-    const parentNode = spaceNodes[parent_node_id];
-    if (!parentNode) {
-        console.error("Parent node not found in storage (should not happen)");
-        return false;
-    }
-    // update the parent node with the new branch data
-    const branchData = {
-		selectedText: selected_text_data.selectedText,
-		selectedTextContainerId: selected_text_data.selectedTextContainerId,    // convert to string
-	};
-    console.log("Selected text container id - helper - create branch:", selected_text_data.selectedTextContainerId);
-    parentNode.branches[branch_node_id] = branchData;
-    spaceNodes[parent_node_id] = parentNode;
-
-    const newBranchNode = {
-		title: branch_node_title,
-		isParent: false,
-		messages: [],
-		branches: {},
-	};
-
-    spaceNodes[branch_node_id] = newBranchNode;
-
-	// save the new arrays to storage
-	const savedSpaceNodes = await setToStorage(node_space_id, spaceNodes);
-    if (!savedSpaceNodes) {
-		console.error("Nodes not saved to storage");
-		return false;
-	}
-	return true;
 }
+
 
 /***** Update Storage Objects *****/
-// Function that retrieves object from storage - get it from storage, search for the one we want, and pop it from the array
-
 export async function updateNodeMessages(node_space_id, node_id, messages) {
-
-    const spaceNodes = await getFromStorage(node_space_id);
-    if (!spaceNodes) {
-        console.error("Nodes not found in storage");
-        return false;
-    }
-
-    const node = spaceNodes[node_id];
-    if (!node) {
-        console.error("Node not found in storage");
-        return false;
-    }
-
-    // update the node with the new messages
-    node.messages = messages;
-
-    // get the length of the messages dict
-    var messagesLength = messages.length;
-   
-    for (const branch_id in node.branches) {
-
-        let selectedTextContainerId = node.branches[branch_id].selectedTextContainerId;
-        selectedTextContainerId = selectedTextContainerId;  // convert back to number, already has been normalized
-        
-        console.log("Selected text container id - helper:", selectedTextContainerId);
-        console.log("Messages length - helper:", messagesLength - 2);
-
-        if (selectedTextContainerId > messagesLength - 2) { // subtract 2 to account for the overwritten messages
-            // set the selected text container id to be null
-            node.branches[branch_id].selectedTextContainerId = null;
-            console.log("Selected text container id is greater than the length of the messages. Setting it to null");
+	try {
+		const spaceNodes = await getFromStorage(node_space_id);
+		if (!spaceNodes) {
+			console.error("Nodes not found in storage");
+			return false;
 		}
-    }
 
-    spaceNodes[node_id] = node;
+		const node = spaceNodes[node_id];
+		if (!node) {
+			console.error("Node not found in storage");
+			return false;
+		}
 
-    const savedSpaceNodes = await setToStorage(node_space_id, spaceNodes);
-    if (!savedSpaceNodes) {
-        console.error("Nodes not saved to storage");
-        return false;
-    }
-    return true;
-}
+		// Update node with new messages
+		node.messages = messages;
 
-export async function updateNodeTitle(nodeId, newTitle) {
-    
-    const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+		// Check for overwritten messages in branches
+		const messagesLength = messages.length;
+		for (const branch_id in node.branches) {
+			let selectedTextContainerId = node.branches[branch_id].selectedTextContainerId;
+			selectedTextContainerId = Math.floor(selectedTextContainerId / 2);
 
-    if (!nodeSpacesKeys) {
-        console.error("Node spaces not found in storage");
-        return false;
-    }
-    
-    for (const nodeSpaceKey in nodeSpacesKeys) {
-        const nodes = await getFromStorage(nodeSpaceKey);
-
-        if (!nodes) {
-            console.error("Nodes not found in storage. This should not happen.");
-            continue;
-        }
-
-        if (nodeId in nodes) {
-			// update the node with the new title
-			nodes[nodeId].title = newTitle;
-			const savedNodes = await setToStorage(nodeSpaceKey, nodes);
-
-			if (!savedNodes) {
-				console.error("Nodes title not saved to storage");
-				return false;
+			if (selectedTextContainerId > messagesLength - 2) {
+				node.branches[branch_id].isMessageOverwritten = true;
+				console.warn(`Branch message at container ${selectedTextContainerId} is overwritten`);
 			}
-			console.log("Node title updated in storage:", newTitle);
-			return true;
 		}
-    }
 
-    console.log("Node not found in storage. Likely was not a stored node");
-    return true;    // might change
-}
-
-export async function deleteNodeSpace(nodeSpaceId) {
-
-    // delete the node space and remove it from the node spaces keys
-    const deletedNodeSpace = await removeFromStorage(nodeSpaceId);
-    if (!deletedNodeSpace) {
-        console.error("Node space not deleted");
-        return false;
-    }
-
-    // get the node spaces keys
-    const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
-    if (!nodeSpacesKeys) {
-        console.error("Node spaces keys not found in storage");
-        return false;
-    }
-
-    // remove the node space key from the node spaces keys
-
-    if (nodeSpaceId in nodeSpacesKeys) {
-        delete nodeSpacesKeys[nodeSpaceId];
-    } else {
-        console.error("Node space key not found in node spaces keys");
-        return false;
-    }
-
-    // save the new node spaces keys
-    const savedNodeSpacesKeys = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys );
-    if (!savedNodeSpacesKeys) {
-        console.error("Node spaces keys not saved to storage");
-        return false;
-    }
-    return true;
-}
-
-export async function deleteNode(node_id, nodes=null, level=0) {
-    
-    // we need to get the nodes from storage, check if the node is in the nodes, and recursively delete all branches of the node (and the branches of those nodes too) if it is found
-    var nodeSpaceKey;
-    
-    if (nodes === null) {
-        const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
-        if (!nodeSpacesKeys) {
-            console.error("Node spaces not found in storage");
-            return false;
-        }
-        
-        for (nodeSpaceKey in nodeSpacesKeys) {
-            nodes = await getFromStorage(nodeSpaceKey);
-
-            if (!nodes) {
-                console.error("Nodes not found in storage. This should not happen.");
-                continue;
-            }
-
-            if (node_id in nodes) {
-                // Check if this node is the parent node; if it is, delete the node space
-                if (nodes[node_id].isParent) {
-                    // delete the node space
-                    const deletedNodeSpace = await deleteNodeSpace(nodeSpaceKey);
-                    if (!deletedNodeSpace) {
-                        console.error("Node space not deleted");
-                        return false;
-                    }
-                    console.log("Node space deleted");
-                    return true;
-                }
-                break;
-            }
-        }
-    }
-
-    if (node_id in nodes) {
-		// recursively delete the branches of the node
-        const nodeBranchesIds = Object.keys(nodes[node_id].branches);
-		for (const branch_id of nodeBranchesIds) {
-			deleteNode(branch_id, nodes, level + 1);
-            console.log("Branch deleted");
+		// Save the updated node to storage
+		spaceNodes[node_id] = node;
+		const savedSpaceNodes = await setToStorage(node_space_id, spaceNodes);
+		if (!savedSpaceNodes) {
+			console.error("Failed to save updated node messages to storage");
+			return false;
 		}
-		// delete the node
-		delete nodes[node_id];
-        console.log("Node deleted");
-
-	} else if (level === 0) {
-        console.error("Node not found in storage. Node likely was not a stored node");
-        return true;
-    } else if (level > 0) {
-        console.error("Node not found in storage. This should not happen.");
-        return false;
-    }
-
-    // save the new nodes to storage
-    if (level === 0) {
-        const savedNodes = await setToStorage(nodeSpaceKey, nodes);
-        if (!savedNodes) {
-            console.error("Nodes not saved to storage");
-            return false;
-        }
-    }
-    return true;
+		return true;
+	} catch (error) {
+		console.error("Error in updateNodeMessages:", error);
+		return false;
+	}
 }
+
 
 export async function updateNodeSpaceTitle(nodeSpaceId, newTitle) {
-        
-    const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+	try {
+		const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+		if (!nodeSpacesKeys) {
+			console.error("Node spaces not found in storage");
+			return false;
+		}
 
-    if (!nodeSpacesKeys) {
-        console.error("Node spaces not found in storage");
-        return false;
-    }
-    console.log("Node spaces keys:", nodeSpacesKeys);
-    if (nodeSpaceId in nodeSpacesKeys) {
-        nodeSpacesKeys[nodeSpaceId].title = newTitle;
-    } else {
-        console.error("Node space not found in storage");
-        return false;
-    }
+		if (nodeSpaceId in nodeSpacesKeys) {
+			nodeSpacesKeys[nodeSpaceId].title = newTitle;
+		} else {
+			console.error("Node space not found in storage");
+			return false;
+		}
 
-    const savedNodeSpacesKeys = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
-    if (!savedNodeSpacesKeys) {
-        console.error("Node spaces title not saved to storage");
-        return false;
-    }
-    return true;
+		const savedNodeSpacesKeys = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
+		if (!savedNodeSpacesKeys) {
+			console.error("Failed to save node space title to storage");
+			return false;
+		}
+		return true;
+	} catch (error) {
+		console.error("Error in updateNodeSpaceTitle:", error);
+		return false;
+	}
 }
+
+
+export async function updateNodeTitle(nodeId, newTitle) {
+	try {
+		const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+		if (!nodeSpacesKeys) {
+			console.error("Node spaces not found in storage");
+			return false;
+		}
+
+		for (const nodeSpaceKey in nodeSpacesKeys) {
+			const nodes = await getFromStorage(nodeSpaceKey);
+			if (!nodes) {
+				console.error("Nodes not found in storage. This should not happen.");
+				continue;
+			}
+
+			if (nodeId in nodes) {
+				nodes[nodeId].title = newTitle;
+				const savedNodes = await setToStorage(nodeSpaceKey, nodes);
+				if (!savedNodes) {
+					console.error("Failed to save updated node title to storage");
+					return false;
+				}
+				console.log("Node title updated in storage:", newTitle);
+				return true;
+			}
+		}
+
+		console.warn("Node not found in storage. It might not have been stored.");
+		return true; // It might be valid for a node not to be stored, depending on the application logic
+	} catch (error) {
+		console.error("Error in updateNodeTitle:", error);
+		return false;
+	}
+}
+
+
+/***** Delete Storage Objects *****/
+export async function deleteNodeSpace(nodeSpaceId) {
+	try {
+		const deletedNodeSpace = await removeFromStorage(nodeSpaceId);
+		if (!deletedNodeSpace) {
+			console.error("Failed to delete node space from storage");
+			return false;
+		}
+
+		const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+		if (!nodeSpacesKeys) {
+			console.error("Node spaces keys not found in storage");
+			return false;
+		}
+
+		if (nodeSpaceId in nodeSpacesKeys) {
+			delete nodeSpacesKeys[nodeSpaceId];
+		} else {
+			console.error("Node space key not found in node spaces keys");
+			return false;
+		}
+
+		const savedNodeSpacesKeys = await setToStorage(Constants.NODE_SPACES_KEY, nodeSpacesKeys);
+		if (!savedNodeSpacesKeys) {
+			console.error("Failed to save updated node spaces keys to storage");
+			return false;
+		}
+		return true;
+	} catch (error) {
+		console.error("Error in deleteNodeSpace:", error);
+		return false;
+	}
+}
+
+
+export async function deleteNode(node_id, nodes = null, level = 0) {
+	try {
+		let nodeSpaceKey;
+
+		if (nodes === null) {
+			const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+			if (!nodeSpacesKeys) {
+				console.error("Node spaces not found in storage");
+				return false;
+			}
+
+			for (nodeSpaceKey in nodeSpacesKeys) {
+				nodes = await getFromStorage(nodeSpaceKey);
+				if (!nodes) {
+					console.error("Nodes not found in storage. This should not happen.");
+					continue;
+				}
+
+				if (node_id in nodes) {
+					if (nodes[node_id].isParent) {
+						const deletedNodeSpace = await deleteNodeSpace(nodeSpaceKey);
+						if (!deletedNodeSpace) {
+							console.error("Node space not deleted");
+							return false;
+						}
+						console.log("Node space deleted");
+						return true;
+					}
+					break;
+				}
+			}
+		}
+
+		if (node_id in nodes) {
+			const nodeBranchesIds = Object.keys(nodes[node_id].branches);
+			for (const branch_id of nodeBranchesIds) {
+				await deleteNode(branch_id, nodes, level + 1);
+				console.log("Branch deleted. ID was", branch_id);
+			}
+			delete nodes[node_id];
+			console.log("Node deleted. ID was:", node_id);
+		} else {
+			if (level === 0) {
+				console.warn("Node not found in storage. Node likely was not a stored node");
+				return true;
+			} else {
+				console.error("Node not found in storage. This should not happen.");
+				return false;
+			}
+		}
+
+		if (level === 0) {
+			const savedNodes = await setToStorage(nodeSpaceKey, nodes);
+			if (!savedNodes) {
+				console.error("Nodes not saved to storage");
+				return false;
+			}
+		}
+		return true;
+	} catch (error) {
+		console.error("Error in deleteNode:", error);
+		return false;
+	}
+}
+
+
 
 /**** Getter Functions ******/
 export async function getNodeSpaces() {
-	const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
-	if (nodeSpacesKeys === null) {
-        console.warn("No Node spaces available in storage");
-        return null;
-    } else if (nodeSpacesKeys === false) {
-		console.error("Node spaces not found in storage");
+	try {
+		const nodeSpacesKeys = await getFromStorage(Constants.NODE_SPACES_KEY);
+		if (nodeSpacesKeys === null) {
+			console.warn("No Node spaces available in storage");
+			return null;
+		} else if (nodeSpacesKeys === false) {
+			console.error("Failed to retrieve node spaces from storage");
+			return false;
+		}
+		return nodeSpacesKeys;
+	} catch (error) {
+		console.error("Error in getNodeSpaces:", error);
 		return false;
 	}
-	return nodeSpacesKeys;
 }
 
+
 export async function getNodeSpaceData(node_space_id) {
-    const nodes = await getFromStorage(node_space_id);
-    if (nodes === null) {
-        console.warn("No nodes available in storage");
-        return null;
-    } else if (nodes === false) {
-        console.error("Nodes not found in storage");
-        return false;
-    }
-    return nodes;
+	try {
+		const nodes = await getFromStorage(node_space_id);
+		if (nodes === null) {
+			console.warn("No nodes available in storage");
+			return null;
+		} else if (nodes === false) {
+			console.error("Failed to retrieve nodes from storage");
+			return false;
+		}
+		return nodes;
+	} catch (error) {
+		console.error("Error in getNodeSpaceData:", error);
+		return false;
+	}
 }
 
 

@@ -1,44 +1,42 @@
 // transformData.js
 
+/**
+ * Transforms storage data into nodes and edges data for use in the flow diagram.
+ *
+ * @param {Object} storageData - The raw data from storage, where keys are node IDs and values are node information.
+ * @returns {Object} An object containing arrays of nodesData and edgesData.
+ */
 export const transformStorageData = (storageData) => {
 	const nodesData = [];
 	const edgesData = [];
-	/*
-	sourceHandle: node_id-s-branch_container_id
-	targetHandle: t-branch_id
 
-	*/
-
-	// Assume storageData is an object where keys are node IDs and values are the node information
+	// Iterate over each node in the storageData
 	Object.keys(storageData).forEach((node_id) => {
-
 		const selectedTextContainerIds = [];
 		const node = storageData[node_id];
 		const branches = node.branches;
 
-		const targetHandlesList = [{ id: `t-${node_id}`}];
+		// Initialize the target handles list with a default handle
+		const targetHandlesList = [{ id: `t-${node_id}` }];
 		let sourceHandlesList = [];
 
-		// If the item includes information about connections, create edges
+		// Iterate over each branch to create edges and handle connections
 		Object.keys(branches).forEach((branch_id) => {
 			const branch = branches[branch_id];
 
-			// Add the selected text container ID to the list if it is not already there
-			if (!selectedTextContainerIds.includes(branch.selectedTextContainerId))
+			// Add the selected text container ID to the list if it is not already included
+			if (!selectedTextContainerIds.includes(branch.selectedTextContainerId)) {
 				selectedTextContainerIds.push(branch.selectedTextContainerId);
+			}
 
-			// Create the eges that will connect to this node 
+			// Create source and target handles for the edge
 			const sourceHandle = `${node_id}-s-${branch.selectedTextContainerId}`;
 			const targetHandle = `t-${branch_id}`;
 
-			// add the source handle to the list that will be stored in the node
-			sourceHandlesList.push({
-				id: sourceHandle,
-			});
+			// Add the source handle to the list that will be stored in the node
+			sourceHandlesList.push({ id: sourceHandle });
 
-		//	console.log("Edge Source Handle:", sourceHandle);
-		//	console.log("Edge Target Handle:", targetHandle);
-
+			// Create the edge that connects this node to its branch
 			const new_edge = {
 				id: `${node_id}-${branch_id}`,
 				type: "custom-edge",
@@ -56,11 +54,11 @@ export const transformStorageData = (storageData) => {
 			edgesData.push(new_edge);
 		});
 
-		
+		// Create the new node with its data and initial position
 		const new_node = {
-			id: node_id, // The key is the node ID
-			type: "custom-node", // or whatever type your node needs to be
-			position: { x: 0, y: 0 }, // Define them here, position will be updated later
+			id: node_id,
+			type: "custom-node",
+			position: { x: 0, y: 0 }, // Position will be updated later
 			data: {
 				title: node.title,
 				isParent: node.isParent,

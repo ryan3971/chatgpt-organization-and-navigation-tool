@@ -1,5 +1,6 @@
 var Constants = null;
 
+// Temp storage for the node data
 var tempStorage = {
 	node_type: null,
 	node_space_id: null,
@@ -8,108 +9,106 @@ var tempStorage = {
 	selected_text_data: null,
 };
 
-// ChatGPT html references elements
+/* ChatGPT HTML element selectors */
 const CHATGPT_STOP_BUTTON_ELEMENT = '[data-testid="stop-button"]';
 const CHATGPT_NAV_PANEL_ELEMENT = "nav[class]";
 const CHATGPT_TITLE_INPUT_ELEMENT = 'input[type="text"]';
 const CHATGPT_BUTTON_DANGER_ATTRIBUTE = "button.btn-danger";
 const CHATGPT_BUTTON_DANGER_INNER_TEXT = "Delete";
 const CHATGPT_HREF_ATTRIBUTE = 'a[href*="/c/"]';
-
 const CHATGPT_DATA_TEST_ID_ATTRIBUTE = "data-testid";
 const CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE = '[data-message-id]';
-
 const CHATGPT_HREF_ATTRIBUTE_START = 'a[href*="';
 const CHATGPT_MESSAGE_CONTAINER_START = '[data-testid="conversation-turn-';
-
 const HTML_GENERIC_CLOSING = '"]';
-
 const HTML_LIST_TAG = "li";
 const HTML_ANCHOR_TAG = "a";
 const HTML_HREF_ATTRIBUTE = "href";
 
 const CONTENT_SCRIPT_CONSTANTS = "content_script_constants";
 
-/************** Mutation Observer Section **************/
+/***** Mutation Observer Section *****/
 
-// Define the target node (in this case, the entire document)
-const targetNode = document.body;
-
-// Define the configuration for the observer
-const config = { childList: true, subtree: true };
+const targetNode = document.body; // Define the target node (in this case, the entire document)
+const config = { childList: true, subtree: true }; // Define the configuration for the observer
 
 // Define the state of the elements we are interested in logging the appearance of
-let sendButtonFound = false;
-let stopButtonFound = false;
-let navElementFound = false;
+let sendButtonFound = false; // Used to check when a message from ChatGPT has finished being received
+let stopButtonFound = false; // Used to check when a response is being made by ChatGPT
+let deleteDialogFound = false; // Used to detect when/if a node is being deleted
+let inputFieldFound = false; // Used to detect when a node title is being edited
+let navPanelNodeIds = []; // Used to store the node IDs in the navigation panel
+let renamedNodeData = {}; // Used to store the data of a node being renamed
 
-let deleteDialogFound = false;	//Used to detect when a node is being deleted
-let inputFieldFound = false;	//Used to detect when a node title is being edited
+/* Function to ensure Constants are loaded */
+function ensureConstants() {
+	if (!Constants) {
+		throw new Error("Constants have not been loaded yet.");
+	}
+}
 
-let navPanelNodeIds = [];
-let renamedNodeData = {};
-
-var creatingNewBranchNode = false;
-
-// Function to check and handle the presence of elements of interest
+/* Function to check and handle the presence of elements of interest */
 async function checkAndHandleElements(observer, mutation) {
-	if (!Constants) return; // Wait for the constants to be loaded
+	try {
+		ensureConstants();
 
-	// Interested in the send button and the navigational panel
-	const stopButton = document.querySelector(CHATGPT_STOP_BUTTON_ELEMENT);
-	const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
+		const stopButton = document.querySelector(CHATGPT_STOP_BUTTON_ELEMENT);
+		const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
 
-	// Use this to "detect" new messages in the node
-	if (stopButton && !stopButtonFound) {
-		console.log("Stop button appeared in the DOM.");
-		stopButtonFound = true;
+		if (stopButton && !stopButtonFound) {
+			console.log("Stop button appeared in the DOM.");
+			stopButtonFound = true;
+		} else if (!stopButton && stopButtonFound) {
+			console.log("Stop button disappeared from the DOM.");
+			stopButtonFound = false;
 
-	} else if (!stopButton && stopButtonFound) {
-		// If this occurred, a new node message is available
-		console.log("Stop button disappeared from the DOM.");
-		stopButtonFound = false;
-
-		// A message was sent, check if this is a new branch node, and handle accordingly
-		if (tempStorage.node_type === Constants.NODE_TYPE_NEW_BRANCH) {
-			// get the node element from the navigation panel
-			creatingNewBranchNode = true;
-			const madeNewBranch = await createNewBranchNode(navPanel);
-			if (!madeNewBranch) return;
-			creatingNewBranchNode = false;
-		}
-		if (tempStorage.node_type === Constants.NODE_TYPE_EXISTING) {
-			// Get the new node message
-			const nodeMessages = getNodeMessages();
-			const response = await sendMessage(Constants.UPDATE_NODE_MESSAGES, nodeMessages);
-			if (!response.status) {
-				console.log("Error from background script in updating node messages");
-				return;
+			if (tempStorage.node_type === Constants.NODE_TYPE_NEW_BRANCH) {
+				const madeNewBranch = await createNewBranchNode(navPanel);
+				if (!madeNewBranch) return;
+			}
+			if (tempStorage.node_type === Constants.NODE_TYPE_EXISTING) {
+				const nodeMessages = getNodeMessages();
+				const response = await sendMessage(Constants.UPDATE_NODE_MESSAGES, nodeMessages);
+				if (!response?.status) {
+					console.error("Error updating node messages");
+				}
 			}
 		}
-	}
 
-	if (navPanel)	{
-		//const deleteDialog = document.querySelector('div[role="dialog"]');
+		if (navPanel) {
+			handleNavPanel(navPanel);
+		}
+	} catch (error) {
+		console.error("Error in checkAndHandleElements:", error);
+	}
+}
+
+/* Refactored handling of the navigation panel */
+function handleNavPanel(navPanel) {
+	try {
 		const inputField = document.querySelector(CHATGPT_TITLE_INPUT_ELEMENT);
 		const dangerButton = document.querySelector(CHATGPT_BUTTON_DANGER_ATTRIBUTE);
 
+		handleDeleteDialog(navPanel, dangerButton);
+		handleInputField(navPanel, inputField);
+	} catch (error) {
+		console.error("Error in handleNavPanel:", error);
+	}
+}
+
+/* Handle delete dialog interactions */
+function handleDeleteDialog(navPanel, dangerButton) {
+	try {
 		if (dangerButton && dangerButton.innerText.trim() === CHATGPT_BUTTON_DANGER_INNER_TEXT && !deleteDialogFound) {
 			console.log("Delete dialog appeared in the DOM");
 			deleteDialogFound = true;
-			const navPanelElements = navPanel.querySelectorAll(CHATGPT_HREF_ATTRIBUTE);
-			navPanelNodeIds = getIDfromHref(navPanelElements); // store the node ids from the nav panel into an array
-		
-		} else if ((!dangerButton && deleteDialogFound) || (dangerButton && dangerButton.innerText.trim() !== CHATGPT_BUTTON_DANGER_INNER_TEXT && deleteDialogFound)) {
-			console.log("Delete dialog disappeared from the DOM...and it was there before");
+			navPanelNodeIds = getIDfromHref(navPanel.querySelectorAll(CHATGPT_HREF_ATTRIBUTE));
+		} else if ((!dangerButton || dangerButton.innerText.trim() !== CHATGPT_BUTTON_DANGER_INNER_TEXT) && deleteDialogFound) {
+			console.log("Delete dialog disappeared from the DOM");
 			deleteDialogFound = false;
 
-			// set a timeout to give time for the node to be deleted from the nav panel
 			setTimeout(() => {
-				// query nav panel for all node elements, het the ids for them
-				const navPanelElements = navPanel.querySelectorAll(CHATGPT_HREF_ATTRIBUTE);
-				const updatedNavPanelIds = getIDfromHref(navPanelElements);
-
-				// compare the two arrays to find the deleted node id
+				const updatedNavPanelIds = getIDfromHref(navPanel.querySelectorAll(CHATGPT_HREF_ATTRIBUTE));
 				const deletedNodeId = navPanelNodeIds.find((id) => !updatedNavPanelIds.includes(id));
 
 				if (deletedNodeId) {
@@ -118,10 +117,17 @@ async function checkAndHandleElements(observer, mutation) {
 				} else {
 					console.log("No node was deleted");
 				}
-				navPanelNodeIds = []; // reset the array
+				navPanelNodeIds = [];
 			}, 3000);
 		}
+	} catch (error) {
+		console.error("Error in handleDeleteDialog:", error);
+	}
+}
 
+/* Handle node title input field interactions */
+function handleInputField(navPanel, inputField) {
+	try {
 		if (inputField && !inputFieldFound) {
 			console.log("Input field appeared in the DOM");
 			inputFieldFound = true;
@@ -131,10 +137,9 @@ async function checkAndHandleElements(observer, mutation) {
 			const nodeTitle = parentElement.innerText;
 			renamedNodeData = { node_href: nodeHref, node_title: nodeTitle };
 		} else if (!inputField && inputFieldFound) {
-			console.log("Input field is not in the DOM...and it was there before");
+			console.log("Input field is not in the DOM anymore");
 			inputFieldFound = false;
 
-			// set a timeout to give time for the node title to be updated in the nav panel
 			setTimeout(() => {
 				const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + renamedNodeData.node_href + HTML_GENERIC_CLOSING;
 				const navPanelElement = navPanel.querySelector(nodeHref);
@@ -143,17 +148,36 @@ async function checkAndHandleElements(observer, mutation) {
 				if (nodeTitle !== renamedNodeData.node_title) {
 					console.log("Node title changed:", nodeTitle);
 					const nodeId = getIDfromHref([navPanelElement])[0];
-					const data = { node_id: nodeId, new_title: nodeTitle };
-					// send the node id and new node title to the background script
-					sendMessage(Constants.HANDLE_NODE_RENAMING, data);
+					sendMessage(Constants.HANDLE_NODE_RENAMING, { node_id: nodeId, new_title: nodeTitle });
 				} else {
 					console.log("No node title change");
 				}
-				renamedNodeData = {}; // reset the object
+				renamedNodeData = {};
 			}, 3000);
 		}
+	} catch (error) {
+		console.error("Error in handleInputField:", error);
 	}
-};
+}
+
+/* Extract node IDs from href attributes */
+function getIDfromHref(elements) {
+	const navPanelIds = [];
+
+	elements.forEach((element) => {
+		try {
+			const href = element.href;
+			const url = new URL(href);
+			const nodeId = url.pathname;
+			navPanelIds.push(nodeId);
+		} catch (error) {
+			console.error("Error parsing href:", element.href, error);
+		}
+	});
+
+	return navPanelIds;
+}
+
 
 // Callback function to execute when mutations are observed
 const callback = function (mutationsList, observer) {
@@ -178,215 +202,156 @@ observer.observe(targetNode, config);
 
 /************** General Functions **************/
 
-function getIDfromHref(elements) {
-
-	const navPanelIds = [];
-	elements.forEach((element) => {
-		const href = element.href;
-		const url = new URL(href);
-		const nodeId = url.pathname;
-		navPanelIds.push(nodeId);
-	});
-
-	return navPanelIds;
-}
-
+/* Function to create a new branch node */
 async function createNewBranchNode(navPanel) {
-	console.log("Message sent in new branch node");
+	console.log("Creating new branch node");
 
-	const url = new URL(window.location.href);
-	const nodeId = url.pathname;
-
-	const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + nodeId + HTML_GENERIC_CLOSING;
-
-	// try to get the title now, if it fails, it will be tried again later (nav panel may not have updated yet)
-	let nodeTitle = "ChatGPT Chat";
 	try {
-		nodeTitle = navPanel.querySelector(nodeHref).innerText; // potential race condition between this and the the nav field being created
-	} catch (error) {
-		console.error("Error getting node title from nav panel", error);
-	}
+		const url = new URL(window.location.href);
+		const nodeId = url.pathname;
+		const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + nodeId + HTML_GENERIC_CLOSING;
 
-	const data = {
-		node_id: nodeId,
-		node_title: nodeTitle,
-	};
-	const response = await sendMessage(Constants.HANDLE_NEW_BRANCH_CREATION, data);
-	if (!response.status) {
-		console.log("Error from background script in making branch node. Abort");
+		let nodeTitle = "ChatGPT Chat";
+		try {
+			nodeTitle = navPanel.querySelector(nodeHref)?.innerText || nodeTitle;
+		} catch (error) {
+			console.warn("Could not get node title from nav panel immediately, might be updated later", error);
+		}
+
+		const data = { node_id: nodeId, node_title: nodeTitle };
+		const response = await sendMessage(Constants.HANDLE_NEW_BRANCH_CREATION, data);
+
+		if (!response?.status) {
+			console.error("Failed to create new branch node");
+			return false;
+		}
+
+		console.log("Branch node created successfully");
+		tempStorage.node_type = Constants.NODE_TYPE_EXISTING;
+		tempStorage.node_id = nodeId;
+		tempStorage.node_title = nodeTitle;
+
+		return true;
+	} catch (error) {
+		console.error("Error in createNewBranchNode:", error);
 		return false;
 	}
-
-	// Update the tempStorage to reflect the new node type
-	tempStorage.node_type = Constants.NODE_TYPE_EXISTING;
-	tempStorage.node_id = nodeId;
-	tempStorage.node_title = nodeTitle;
-	// Don't need to update the node_space_id
-
-	return true;
 }
 
-// function getNodeTitle(node_id)	{
-
-// 	if (tempStorage.node_title) {
-// 		return tempStorage.node_title;
-// 	}
-// 	const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
-// 	// const url = new URL(window.location.href);
-// 	// const nodeId = url.pathname;
-// 	const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + node_id + HTML_GENERIC_CLOSING;
-
-// 	let nodeTitle = null;
-// 	try	{
-// 		nodeTitle = navPanel.querySelector(nodeHref).innerText; // potential race condition between this and the the nav field being created
-// 	} catch (error) {
-// 		console.error("Error getting node title from nav panel", error);
-// 	}
-	
-// 	return nodeTitle;
-// }
-
-// Function to extract conversation text and save it
+/* Function to extract conversation data and save it */
 function getNodeMessages() {
-	let nodeMessages = []; // Reset the array
-	let turnNumber = 2; // Start with 2
+	let nodeMessages = [];
+	let turnNumber = 2;
 
-	while (true) {
-		const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(turnNumber) + HTML_GENERIC_CLOSING;
-		const conversationTurn = document.querySelector(containerId);
+	try {
+		while (true) {
+			const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(turnNumber) + HTML_GENERIC_CLOSING;
+			const conversationTurn = document.querySelector(containerId);
 
-		if (!conversationTurn) {
-			break; // Exit the loop if no more conversation turns are found
+			if (!conversationTurn) break;
+
+			const dataMessageId = conversationTurn.querySelector(CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE);
+			const text = dataMessageId?.textContent.trim().substring(0, 100) || "";
+
+			const index = Math.floor(turnNumber / 2) - 1;
+			if (!nodeMessages[index]) {
+				nodeMessages[index] = [];
+			}
+			nodeMessages[index].push(text);
+
+			turnNumber++;
 		}
-		
-		// locate the element within the conversation turn that has the data-message-id attribute (using this to skip down to the closet identifiable element before the inner text)
-		const dataMessageId = conversationTurn.querySelector(CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE);
-
-		// Extract the text and trim it to the first 100 characters
-		const text = dataMessageId.textContent.trim().substring(0, 100);
-
-		let index = Math.floor(turnNumber / 2) - 1;
-		if (!nodeMessages[index]) {
-			nodeMessages[index] = [];
-		}
-		nodeMessages[index].push(text);
-
-		turnNumber++; // Move to the next conversation turn
+		console.log("Extracted Conversation Data:", nodeMessages);
+	} catch (error) {
+		console.error("Error in getNodeMessages:", error);
 	}
-
-	console.log("Extracted Conversation Data:", nodeMessages);
 
 	return nodeMessages;
-};
+}
 
+/* Function to get the selected text */
 async function getSelectedText() {
 	const selection = window.getSelection();
+	const response = { flag: null, data: null };
 
-	var response = {
-		flag: null,
-		data: null,
-	}
-
-	if (!selection || selection.toString().trim() === "")	{
-		console.log("No text selected");
+	if (!selection || selection.toString().trim() === "") {
 		response.flag = Constants.NO_TEXT_SELECTED;
-		return response;
-	}
-	
-	if (selection.toString().trim().length > Constants.MAX_TEXT_SELECTION_LENGTH) {
-		console.log("Selected text exceeds maximum length");
+	} else if (selection.toString().trim().length > Constants.MAX_TEXT_SELECTION_LENGTH) {
 		response.flag = Constants.MAX_TEXT_SELECTION_LENGTH_EXCEEDED;
-		return response;
-	}
+	} else {
+		const range = selection.getRangeAt(0);
+		const startElement = findAncestorWithTestId(range.startContainer.parentElement);
+		const endElement = findAncestorWithTestId(range.endContainer.parentElement);
 
-	const range = selection.getRangeAt(0);  // Get the range of the selected text
-    const startContainer = range.startContainer;  // The start node of the selection
-    const endContainer = range.endContainer;      // The end node of the selection
+		if (startElement && endElement) {
+			if (startElement === endElement) {
+				const dataTestId = startElement.getAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE);
+				const selectedTextContainerId = parseInt(dataTestId.match(/(\d+)/)[0], 10) - 2;
 
-    // Function to find the closest ancestor with the `data-testid` attribute
-    const findAncestorWithTestId = (node) => {
-        while (node && node !== document.body) {
-            if (node.hasAttribute && node.hasAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE)) {
-				return node;
+				response.flag = Constants.VALID_TEXT_SELECTION;
+				response.data = { selectedText: selection.toString().trim(), selectedTextContainerId };
+			} else {
+				response.flag = Constants.TEXT_SPANS_MULTIPLE_MESSAGES;
 			}
-            node = node.parentElement;
-        }
-        return null;
-    };
-
-    const startElement = findAncestorWithTestId(startContainer.parentElement);
-    const endElement = findAncestorWithTestId(endContainer.parentElement);
-
-    if (startElement && endElement) {
-         if (startElement === endElement) {
-			const dataTestId = startElement.getAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE);
-			console.log("Selected text is within a single element.");
-			console.log("Selected text: ", selection.toString().trim());
-			console.log("data-testid:", dataTestId);
-
-			// Extract the number from the conversation-turn attribute
-			var selectedTextContainerId = dataTestId.match(/(\d+)/)[0]
-			console.log("Selected text container id:", selectedTextContainerId);
-			selectedTextContainerId = selectedTextContainerId - 2; // subtract 2 to normalize it
-
-			// return the selected text and the data-testid value
-			response.flag = Constants.VALID_TEXT_SELECTION;
-			response.data = {
-				selectedText: selection.toString().trim(),
-				selectedTextContainerId: selectedTextContainerId,
-			};
 		} else {
-			console.log("Selected text spans multiple elements.");
-			console.log("Start element:", startElement);
-			console.log("End element:", endElement);
-			response.flag = Constants.TEXT_SPANS_MULTIPLE_MESSAGES;
+			response.flag = Constants.INVALID_TEXT_SELECTED;
 		}
-    } else {
-        console.log('Selection is not within the expected elements.');
-		response.flag = Constants.INVALID_TEXT_SELECTED;
-    }
+	}
 	return response;
 }
 
-// Function to focus on an element based on data-testid attribute
-function focusChatMessageByTestId(message_index) {
-	// remember to convert the message_id back to the conversation-turn number
-	const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(message_index + 2) + HTML_GENERIC_CLOSING;
-	const element = document.querySelector(containerId);
-	
-	console.log("Element:", element);
-	if (element) {
-		element.scrollIntoView({
-			behavior: 'smooth', // Enables the scrolling animation
-			block: 'start',    // Aligns the element to the center of the view
-			inline: 'nearest'   // Keeps horizontal alignment as close as possible
-		});
-		element.focus();
-	} else {
-		console.error("Element not found:", selector);
+/* Helper function to find the closest ancestor with the data-testid attribute */
+function findAncestorWithTestId(node) {
+	while (node && node !== document.body) {
+		if (node.hasAttribute && node.hasAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE)) {
+			return node;
+		}
+		node = node.parentElement;
 	}
+	return null;
 }
+/* Function to focus on chat message based on data-testid attribute */
+async function focusChatMessageByTestId(message_index) {
+	console.log("Focusing on chat message:", message_index);
+	const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(message_index + 2) + HTML_GENERIC_CLOSING;
+
+	const focusElement = () => {
+		const element = document.querySelector(containerId);
+		if (element) {
+			element.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+			element.focus();
+			console.log("Element found and focused:", containerId);
+			return true;
+		}
+		console.error("Element not found:", containerId);
+		return false;
+	};
+
+	if (focusElement()) return true;
+
+	console.log("Element not found, retrying in 3 seconds...");
+	await new Promise(resolve => setTimeout(resolve, 3000));
+
+	return focusElement();
+}
+
+
 
 /************** Message Send/Receive Section **************/
 
 // Send in format {action: ..., node_data: ..., data: ...}
 // Receive in format {status: ..., data: ...}
 async function sendMessage(message_key, message_data) {
-	const message = {
-		action: message_key,
-		node_data: tempStorage,
-		data: message_data,
-	};
+	const message = { action: message_key, node_data: tempStorage, data: message_data };
 
-	console.log("Current values of tempStorage:", tempStorage);
-	
+	console.log("Sending message to Background script:", message_key);
+
 	try {
-		console.log("Sending message in sendMessage:", message_key);
+		console.log("Sending message:", message_key);
 		const response = await chrome.runtime.sendMessage(message);
-		console.log("Response from background script in sendMessage: ", response.status);
 		return response;
 	} catch (error) {
-		console.error("Error sending message in sendMessage:", error);
+		console.error("Error in sendMessage:", error);
 		return null;
 	}
 }
@@ -394,98 +359,60 @@ async function sendMessage(message_key, message_data) {
 // Receive in format {action: ..., data: ...}
 // Respond in format {status: ..., data: ...}
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-	console.log("Received message in content script");
-	var data;
-	var response = {
-		status: false,
-		data: null,
-	};
-
 	try {
-		switch (request.action) {
+		const { action, data } = request;
+
+		console.log("Received message in Content Script:", request);
+
+		const response = { status: false, data: null };
+		switch (action) {
 			case CONTENT_SCRIPT_CONSTANTS:
-				console.log("Received message to get content script constants");
-				Constants = request.data;
+				Constants = data;
 				response.status = true;
 				sendResponse(response);
 				break;
 			case Constants.GET_NODE_TITLE:
-				console.log("Received message to get node title");
-				const nodeTitle = tempStorage.node_title  || document.title || "ChatGPT Chat";
 				response.status = true;
-				response.data = nodeTitle;
+				response.data = tempStorage.node_title || document.title || "ChatGPT Chat";
 				sendResponse(response);
 				break;
 			case Constants.GET_NODE_DATA:
-				console.log("Received message to get node data");
 				response.status = true;
 				response.data = tempStorage;
 				sendResponse(response);
 				break;
 			case Constants.SYNC_WITH_CONTENT_SCRIPT:
-				console.log("Received message to update content script temp data");
-				data = request.data;
-				tempStorage.node_type = data.node_type;
-				tempStorage.node_space_id = data.node_space_id;
-				tempStorage.node_title = data.node_title;
-				tempStorage.node_id = data.node_id;
-				tempStorage.selected_text_data = data.selected_text_data;
-
-				// sync with the chat node title
-				if (data.node_type === Constants.NODE_TYPE_EXISTING) {
-					if (document.title !== data.node_title) {
-						response.data = { node_id: data.node_id, node_title: document.title };
-					}
-				}
-				response.status = true;
-				sendResponse(response);
-				break;
-			case Constants.IS_BRANCH_BEING_CREATED:
-				console.log("Received message to check if branch is being created");
-				response.data = creatingNewBranchNode;
-				response.status = true;
-				sendResponse(response);
+				syncWithContentScript(data, sendResponse);
 				break;
 			case Constants.GET_SELECTED_TEXT:
-				console.log("Received message to get selected text");
 				getSelectedText().then((selected_text_response) => {
-					const { flag, data } = selected_text_response;
-					if (flag === Constants.VALID_TEXT_SELECTION) {
-						console.log("Selected text is valid. Sending back");
+					if (selected_text_response.flag === Constants.VALID_TEXT_SELECTION) {
 						response.status = true;
-						response.data = data;
+						response.data = selected_text_response.data;
 					} else {
-						console.log("Invalid text selection:", flag);
-						response.status = false;
-						response.data = flag;
+						response.data = selected_text_response.flag;
 					}
 					sendResponse(response);
 				});
 				break;
 			case Constants.UPDATE_NODE_MESSAGES:
 				const nodeMessages = getNodeMessages();
-				sendMessage(Constants.UPDATE_NODE_MESSAGES, nodeMessages).then((response) => {
+				sendMessage(Constants.UPDATE_NODE_MESSAGES, nodeMessages).then(sendResponse);
+				break;
+			case Constants.SCROLL_TO_CHAT_MESSAGE:
+				focusChatMessageByTestId(request.data).then((status) => {
+					response.status = status;
 					sendResponse(response);
 				});
 				break;
-			case Constants.SCROLL_TO_CHAT_MESSAGE:
-				console.log("Received message to scroll to chat message");
-				// Wait for a second before scrolling to the chat message to let chatGPT scrolling animation to end
-				//setTimeout(() => {
-				response.status = focusChatMessageByTestId(request.data);
-				sendResponse(response);
-				//}, 2000);
-				break;
 			case Constants.ALERT:
-				console.log("Received message to alert");
 				alert(request.data);
 				response.status = true;
 				sendResponse(response);
 				break;
 			default:
-				console.error("Unknown action:", request.action);
+				console.error("Unknown action:", action);
 				sendResponse(response);
-				break;
 		}
 	} catch (error) {
 		console.error("Error in message listener:", error);
@@ -493,3 +420,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	}
 	return true;
 });
+
+function syncWithContentScript(data, sendResponse) {
+	tempStorage.node_type = data.node_type;
+	tempStorage.node_space_id = data.node_space_id;
+	tempStorage.node_title = data.node_title;
+	tempStorage.node_id = data.node_id;
+	tempStorage.selected_text_data = data.selected_text_data;
+
+	if (data.node_type === Constants.NODE_TYPE_EXISTING) {
+		if (document.title !== "ChatGPT" && document.title !== data.node_title) {
+			sendResponse({ status: true, data: { node_id: data.node_id, node_title: document.title } });
+			return;
+		}
+	}
+	sendResponse({ status: true });
+}

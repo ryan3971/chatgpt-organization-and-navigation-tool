@@ -1,25 +1,62 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
 import Title from "./NodeTitle";
 import MessageTable from "./MessageTable";
 import CustomHandle from "./CustomHandle";
 
+import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
+import { showToast } from "../../../toast/toastService";
+import * as Constants from "../../../../util/constants";
+
 const CustomNode = ({ id, data, selected }) => {
 	const { title, messages, selectedTextContainerIds, isParent } = data;
 	const refs = useRef({});
+
+	const updateNodeInternals = useUpdateNodeInternals();
+
+	// Effect to update the node internals when the node is mounted or its ID changes
+	useEffect(() => {
+		updateNodeInternals(id);
+		console.log("Updating node internals for node", id);
+	}, [id, updateNodeInternals]);
+
+	// Handler for double-click events on the node
+	function handleDoubleClick() {
+		console.log("Double clicked node", id);
+
+		// Prepare the data to send to the background script
+		const data = {
+			node_id: id,
+			message_index: null,
+		};
+
+		// Send a message to the background script to open the chat for this node
+		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data)
+			.then((response) => {
+				if (!response.status) {
+					showToast("Error opening chat", { type: "error" });
+					return;
+				}
+			})
+			.catch((error) => {
+				console.error("Unexpected error opening chat:", error);
+				showToast("An unexpected error occurred", { type: "error" });
+			});
+	}
 
 	return (
 		<div
 			className={`${
 				selected ? "border-blue-300 shadow-lg border-3" : "border-gray-200 shadow-sm border"
 			} bg-gray-100 rounded-full min-w-[12rem]`}
-			onDoubleClick={() => console.log("Double clicked node", id)}
+			onDoubleClick={handleDoubleClick}
 		>
-			{/* Title */}
+			{/* Node Title */}
 			<Title title={title} />
+
 			{/* Message Table */}
 			<MessageTable
 				node_id={id}
@@ -27,7 +64,7 @@ const CustomNode = ({ id, data, selected }) => {
 				refs={refs}
 			/>
 
-			{/* Top Handle if node is a parent */}
+			{/* Top Handle if the node is not a parent */}
 			{!isParent && (
 				<Handle
 					type="target"
@@ -40,28 +77,23 @@ const CustomNode = ({ id, data, selected }) => {
 						transform: "translateX(-50%)", // Centered horizontally
 						width: "16px",
 						height: "16px",
-						opacity: 0,
+						opacity: 0, // Hidden by default
 					}}
 				/>
 			)}
 
 			{/* Handles for branches */}
 			{selectedTextContainerIds.map((containerId) => {
-				//console.log("Branch handle for container", containerId);
-				//console.log("Branch index", index);
-				let targetRef = null;
-				if (containerId) {
-					const columnIndex = Math.floor(containerId / 2);
-					targetRef = refs.current[columnIndex];
-				}
+				const columnIndex = Math.floor(containerId / 2);
+				const targetRef = refs.current[columnIndex];
 				const sourceHandle = `${id}-s-${containerId}`;
 
 				return (
 					<CustomHandle
 						key={sourceHandle}
 						node_id={id}
-						containerId={containerId}
 						targetRef={targetRef}
+						containerId={columnIndex}
 						sourceHandle={sourceHandle}
 					/>
 				);

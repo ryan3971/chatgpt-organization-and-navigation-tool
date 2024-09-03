@@ -1,7 +1,7 @@
-// ContextMenu.js
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const PanelContextMenu = ({ visible, x, y, onClose, onRenameSpace }) => {
+	// If the context menu is not visible, do not render anything
 	if (!visible) return null;
 
 	return (
@@ -15,14 +15,7 @@ const PanelContextMenu = ({ visible, x, y, onClose, onRenameSpace }) => {
 					zIndex: 1000,
 				}}
 			>
-				{/* <button
-					key={1}
-					className="border-0 block p-2 text-left w-full hover:bg-white"
-					onClick={onDeleteSpace}
-				>
-					{"Delete Space"}
-				</button> */}
-
+				{/* Rename Space Option */}
 				<button
 					key={2}
 					className="border-0 block p-2 text-left w-full hover:bg-white"

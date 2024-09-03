@@ -5,27 +5,9 @@ import { Container, Row, Col } from "react-bootstrap";
 import MessageButton from "./MessageButton";
 
 const MessageTable = ({ node_id, messages, refs }) => {
-	// useEffect(() => {
-	// 	const handleWindowBlur = () => {
-	// 		// If the document is hidden (e.g., window minimized or tab switched)
-	// 		if (document.hidden) {
-	// 			// Hide all tooltips when the document becomes hidden
-	// 			setShowTooltip({});
-	// 			clearTimeout(tooltipTimeout.current);
-	// 		}
-	// 	};
-
-	// 	// Listen for visibility changes
-	// 	window.addEventListener("blur", handleWindowBlur);
-
-	// 	// Cleanup the event listener when the component unmounts
-	// 	return () => {
-	// 		window.removeEventListener("blur", handleWindowBlur);
-	// 	};
-	// }, []);
-
+	// Effect to create references for each message button
 	useEffect(() => {
-		// Create references for each message button if not already created
+		// Create a ref for each message if not already created
 		messages.forEach((msg, index) => {
 			if (!refs.current[index]) {
 				console.log("Creating ref for index", index);
@@ -34,24 +16,26 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		});
 	}, [messages, refs]);
 
+	// Function to render a message button based on its index
 	const renderButton = (index, message) => {
-		const isUser = index % 2 === 0; // true if index is even, false if index is odd
+		const isUser = index % 2 === 0; // Determine if the message is from the user (even index)
+		const commonStyles = "w-5 h-5 transition-colors duration-200"; // Shared styles for all buttons
+
 		return (
 			<div className="flex justify-center">
-				{isUser && (
+				{isUser ? (
 					<MessageButton
 						node_id={node_id}
 						message={message}
 						message_index={index}
-						style={"w-5 h-5 bg-blue-100 rounded-t-full hover:bg-blue-300 hover:border-blue-300 transition-colors duration-200"}
+						style={`${commonStyles} bg-blue-100 rounded-t-full hover:bg-blue-300 hover:border-blue-300`}
 					/>
-				)}
-				{!isUser && (
+				) : (
 					<MessageButton
 						node_id={node_id}
 						message={message}
 						message_index={index}
-						style={"w-5 h-5 bg-neutral-500 rounded-b-full hover:bg-neutral-700 hover:border-neutral-700 transition-colors duration-200"}
+						style={`${commonStyles} bg-neutral-500 rounded-b-full hover:bg-neutral-700 hover:border-neutral-700`}
 					/>
 				)}
 			</div>
@@ -62,20 +46,21 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		<Container fluid>
 			<Row className="h-full flex-nowrap">
 				{messages.map((msg, index) => {
-						let userMessage = msg[0];
-						let gptMessage = msg[1];
-						
-						return (
-							<Col
-								ref={refs.current[index]}
-								key={index}
-								className="pb-2"
-							>
-								{renderButton(index * 2, userMessage)}
-								{renderButton(index * 2 + 1, gptMessage)}
-							</Col>
-						);
-					})}
+					const userMessage = msg[0];
+					const gptMessage = msg[1];
+
+					return (
+						<Col
+							ref={refs.current[index]}
+							key={index}
+							className="pb-2"
+						>
+							{/* Render the user and GPT message buttons */}
+							{renderButton(index * 2, userMessage)}
+							{renderButton(index * 2 + 1, gptMessage)}
+						</Col>
+					);
+				})}
 			</Row>
 		</Container>
 	);
