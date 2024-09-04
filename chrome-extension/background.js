@@ -23,6 +23,7 @@ let state = {
 	navigatedChat: { tab: null, messageIndex: null },
 	storageChange: false,
 	lastActiveChatTabId: null,
+	tabLoadComplete: {tabId: null, status: false},
 };
 
 // store data to pass onto a newly created branch node
@@ -38,8 +39,9 @@ let branchParentData = {
 chrome.tabs.onUpdated.addListener(handleTabUpdate);
 async function handleTabUpdate(tabId, changeInfo, tab) {
 	try {
+		console.log("Tab status:", tabId, changeInfo, tab);
+		console.log("Tab updated:", tabId, changeInfo, tab);
 		if (changeInfo.status !== "complete") return; // Wait for the page to load completely
-		console.log("Tab updated:", changeInfo.status);
 		// New webpage open, is it ChatGPT?
 		const url = new URL(tab.url);
 		const hostname = url.hostname; // e.g., chatgpt.com
@@ -50,6 +52,16 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		let response = await sendMessage(tabId, Constants.CONTENT_SCRIPT_CONSTANTS, Constants);
 		if (!response || !response.status) {
 			throw new Error("Error sending constants to content script");
+		}
+
+		// Check if we are in the middle of creating a new branch
+		response = await sendMessage(tabId, Constants.IS_NEW_BRANCH);
+		if (!response || !response.status) {
+			throw new Error("Error checking if new branch is being created");
+		}
+		if (response.data) {
+			console.log("New branch node creation in progress...");
+			return;
 		}
 
 		// Check the Node URL
@@ -99,28 +111,17 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 			throw new Error("Error updating content script temp data");
 		}
 
-		// Handle updating the node title if needed
-		if (response.data) {
-			const { node_id, node_title } = response.data;
-			response = await updateNodeTitle(node_id, node_title);
-			if (!response) {
-				throw new Error("Error updating node title");
-			}
-		}
-
 		// Scroll to the message index if navigating from the React app
 		if (state.navigatedChat.tab === tabId) {
 			console.log("Navigating to message index:", state.navigatedChat.messageIndex);
 			navigateToNodeChatCallback(state.navigatedChat.tab, state.navigatedChat.messageIndex);
 			state.navigatedChat = { tab: null, messageIndex: null };
-
 		}
 	} catch (error) {
 		console.error("Error in handleTabUpdate:", error);
 	}
 }
 
-/* Context Menu Setup */
 /* Context Menu Setup */
 chrome.runtime.onInstalled.addListener(() => {
 	const contextMenuItems = [
@@ -644,12 +645,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 					console.log("Received message to update node messages");
 					response.status = await updateChatMessages(node_data, data);
 					break;
+				case Constants.UPDATE_NODE_TITLE:
+					console.log("Received message to update node title");
+					response.status = await updateChatTitle(data);
+					break;
 				case Constants.HANDLE_NEW_BRANCH_CREATION:
 					console.log("Received message to handle new branch creation");
 					const tab_id = sender.tab.id;
 					response.status = await createBranchChat(node_data, data, tab_id);
 					break;
-				case Constants.HANDLE_NODE_RENAMING:
+				case Constants.UPDATE_NODE_TITLE:
 					console.log("Received message to update node title");
 					response.status = await updateChatTitle(data);
 					break;

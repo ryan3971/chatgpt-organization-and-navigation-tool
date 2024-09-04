@@ -27,6 +27,9 @@ const HTML_HREF_ATTRIBUTE = "href";
 
 const CONTENT_SCRIPT_CONSTANTS = "content_script_constants";
 
+var isCreatingNewBranch = false;
+
+
 /***** Mutation Observer Section *****/
 
 const targetNode = document.body; // Define the target node (in this case, the entire document)
@@ -63,7 +66,9 @@ async function checkAndHandleElements(observer, mutation) {
 			stopButtonFound = false;
 
 			if (tempStorage.node_type === Constants.NODE_TYPE_NEW_BRANCH) {
+				isCreatingNewBranch = true;
 				const madeNewBranch = await createNewBranchNode(navPanel);
+				isCreatingNewBranch = false;
 				if (!madeNewBranch) return;
 			}
 			if (tempStorage.node_type === Constants.NODE_TYPE_EXISTING) {
@@ -148,7 +153,8 @@ function handleInputField(navPanel, inputField) {
 				if (nodeTitle !== renamedNodeData.node_title) {
 					console.log("Node title changed:", nodeTitle);
 					const nodeId = getIDfromHref([navPanelElement])[0];
-					sendMessage(Constants.HANDLE_NODE_RENAMING, { node_id: nodeId, new_title: nodeTitle });
+					tempStorage.node_title = nodeTitle;
+					sendMessage(Constants.UPDATE_NODE_TITLE, { node_id: nodeId, new_title: nodeTitle });
 				} else {
 					console.log("No node title change");
 				}
@@ -200,6 +206,43 @@ observer.observe(targetNode, config);
 
 /************** End Mutation Observer Section **************/
 
+/***** New Title MutationObserver Section *****/
+
+/* Function to observe title changes */
+function observeTitleChange() {
+	const targetNode = document.querySelector("title");
+
+	if (targetNode) {
+		const observer = new MutationObserver((mutationsList) => {
+			for (const mutation of mutationsList) {
+				if (mutation.type === "childList") {
+					console.log("Document title changed:", document.title);
+
+					ensureConstants();
+
+					// Send the new title to the background script if this is a known node
+					if (
+						document.title !== "ChatGPT" &&
+						document.title !== tempStorage.node_title &&
+						tempStorage.node_type === Constants.NODE_TYPE_EXISTING
+					) {
+						tempStorage.node_title = document.title;
+						sendMessage(Constants.UPDATE_NODE_TITLE, { node_id: tempStorage.node_id, new_title: document.title });
+					}
+				}
+			}
+		});
+
+		// Start observing the title node for changes
+		observer.observe(targetNode, { childList: true });
+	}
+}
+
+// Start observing title changes
+observeTitleChange();
+
+/***** End Title MutationObserver Section *****/
+
 /************** General Functions **************/
 
 /* Function to create a new branch node */
@@ -211,6 +254,9 @@ async function createNewBranchNode(navPanel) {
 		const nodeId = url.pathname;
 		const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + nodeId + HTML_GENERIC_CLOSING;
 
+		// Wait for the node title to be updated in the nav panel
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+		
 		let nodeTitle = "ChatGPT Chat";
 		try {
 			nodeTitle = navPanel.querySelector(nodeHref)?.innerText || nodeTitle;
@@ -344,7 +390,7 @@ async function focusChatMessageByTestId(message_index) {
 async function sendMessage(message_key, message_data) {
 	const message = { action: message_key, node_data: tempStorage, data: message_data };
 
-	console.log("Sending message to Background script:", message_key);
+	console.log("Sending message to Background script:", message);
 
 	try {
 		console.log("Sending message:", message_key);
@@ -371,6 +417,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				response.status = true;
 				sendResponse(response);
 				break;
+			case Constants.IS_NEW_BRANCH:
+				response.status = true;
+				response.data = isCreatingNewBranch;
+				sendResponse(response);
+				break;
 			case Constants.GET_NODE_TITLE:
 				response.status = true;
 				response.data = tempStorage.node_title || document.title || "ChatGPT Chat";
@@ -382,7 +433,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				sendResponse(response);
 				break;
 			case Constants.SYNC_WITH_CONTENT_SCRIPT:
-				syncWithContentScript(data, sendResponse);
+				tempStorage.node_type = data.node_type;
+				tempStorage.node_space_id = data.node_space_id;
+				tempStorage.node_title = data.node_title;
+				tempStorage.node_id = data.node_id;
+				tempStorage.selected_text_data = data.selected_text_data;
+				sendResponse({ status: true });
 				break;
 			case Constants.GET_SELECTED_TEXT:
 				getSelectedText().then((selected_text_response) => {
@@ -420,19 +476,3 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	}
 	return true;
 });
-
-function syncWithContentScript(data, sendResponse) {
-	tempStorage.node_type = data.node_type;
-	tempStorage.node_space_id = data.node_space_id;
-	tempStorage.node_title = data.node_title;
-	tempStorage.node_id = data.node_id;
-	tempStorage.selected_text_data = data.selected_text_data;
-
-	if (data.node_type === Constants.NODE_TYPE_EXISTING) {
-		if (document.title !== "ChatGPT" && document.title !== data.node_title) {
-			sendResponse({ status: true, data: { node_id: data.node_id, node_title: document.title } });
-			return;
-		}
-	}
-	sendResponse({ status: true });
-}

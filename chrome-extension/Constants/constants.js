@@ -22,8 +22,10 @@ export const HANDLE_NEW_BRANCH_CREATION = "handle_new_branch_creation";     // M
 export const UPDATE_NODE_MESSAGES = "update_node_messages";                 // Message to save/update node messages
 export const SCROLL_TO_CHAT_MESSAGE = "scroll_to_chat_message";             // Message to scroll to indicated chat message
 
-export const HANDLE_NODE_RENAMING = "handle_node_renaming";                 // Message to handle updating the node title
+export const UPDATE_NODE_TITLE = "update_node_title";                 // Message to handle updating the node title
 export const HANDLE_NODE_DELETION = "handle_node_deletion";                 // Message to handle deleting a node
+
+export const IS_NEW_BRANCH = "is_new_branch";                               // Message to check if a node is a new branch
 
 /* Retrieve information from Content script */
 export const GET_NODE_TITLE = "get_node_title"; // Message to get the node title from content script

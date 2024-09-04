@@ -28,7 +28,6 @@ export async function doesNodeExist(node_id) {
 	}
 }
 
-
 /***** Create New Storage Objects *****/
 export async function createNewNodeSpace(node_space_title) {
 	try {
@@ -62,7 +61,6 @@ export async function createNewNodeSpace(node_space_title) {
 	}
 }
 
-
 export async function createNewNodeParent(node_id, node_title) {
 	try {
 		// Create a new node space
@@ -76,6 +74,7 @@ export async function createNewNodeParent(node_id, node_title) {
 		const newParentNode = {
 			title: node_title,
 			isParent: true,
+			parent_id: null,
 			messages: [],
 			branches: {},
 		};
@@ -95,7 +94,6 @@ export async function createNewNodeParent(node_id, node_title) {
 		return false;
 	}
 }
-
 
 export async function createNewNodeBranch(node_space_id, parent_node_id, selected_text_data, branch_node_id, branch_node_title) {
 	try {
@@ -124,6 +122,7 @@ export async function createNewNodeBranch(node_space_id, parent_node_id, selecte
 		const newBranchNode = {
 			title: branch_node_title,
 			isParent: false,
+			parent_id: parent_node_id,
 			messages: [],
 			branches: {},
 		};
@@ -326,7 +325,8 @@ export async function deleteNode(node_id, nodes = null, level = 0) {
 				await deleteNode(branch_id, nodes, level + 1);
 				console.log("Branch deleted. ID was", branch_id);
 			}
-			delete nodes[node_id];
+			if (level !== 0) delete nodes[node_id];	// Do not delete the original node yet
+
 			console.log("Node deleted. ID was:", node_id);
 		} else {
 			if (level === 0) {
@@ -339,6 +339,21 @@ export async function deleteNode(node_id, nodes = null, level = 0) {
 		}
 
 		if (level === 0) {
+			// Use the nodes parent_id property to find the parent node and remove the branch
+			const parentNodeId = nodes[node_id].parent_id;
+			const parentNode = nodes[parentNodeId];
+			if (!parentNode) {
+				console.error("Parent node not found in storage");
+				return false;
+			}
+
+			// Remove the branch from the parent node
+			delete parentNode.branches[node_id];
+			nodes[parentNodeId] = parentNode;
+
+			//Lastly, delete the original node
+			delete nodes[node_id];
+
 			const savedNodes = await setToStorage(nodeSpaceKey, nodes);
 			if (!savedNodes) {
 				console.error("Nodes not saved to storage");
