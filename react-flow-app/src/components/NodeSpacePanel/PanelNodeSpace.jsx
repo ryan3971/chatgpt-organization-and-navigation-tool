@@ -26,10 +26,10 @@ export const PanelNodeSpace = ({ id, onClick, title, imageUrl, activeSpace, info
 		// Send a message to the background script to update the node space title
 		sendMessageToBackground(Constants.REACT_UPDATE_NODE_SPACE_TITLE, data).then((response) => {
 			if (!response.status) {
-				showToast("Error renaming the Nodespace", { type: "error" });
+				showToast("Error renaming the Nodespace", "error");
 				return;
 			}
-			showToast("Nodespace renamed successfully", { type: "success" });
+			showToast("Nodespace renamed successfully", "success");
 		});
 	}, [isEditing, id, titleText, infoText]);
 

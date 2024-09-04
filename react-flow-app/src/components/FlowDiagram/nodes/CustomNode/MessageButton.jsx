@@ -30,14 +30,14 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data)
 			.then((response) => {
 				if (!response.status) {
-					showToast("Error opening chat", { type: "error" });
+					showToast("Error opening chat", "error");
 					return;
 				}
 				console.log("Message sent to background script");
 			})
 			.catch((error) => {
 				console.error("Error opening chat:", error);
-				showToast("An unexpected error occurred", { type: "error" });
+				showToast("An unexpected error occurred", "error");
 			});
 	};
 

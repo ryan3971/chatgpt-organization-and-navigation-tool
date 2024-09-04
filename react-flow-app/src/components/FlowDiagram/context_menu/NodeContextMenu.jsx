@@ -37,8 +37,35 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 		// Send a message to the background script to open the chat
 		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data).then((response) => {
 			if (!response.status) {
-				showToast("Error opening chat", { type: "error" });
+				showToast("Error opening chat", "error");
 				return;
+			} else {
+				showToast("Opening Chat...", "info");
+			}
+		});
+	};
+
+	/**
+	 * Handles opening the chat for a node.
+	 */
+	const handleDeleteChat = () => {
+		console.log("Deleting chat for node", id);
+
+		// Close the context menu first
+		onCloseContextMenu();
+
+		// Create the data object to send to the background script
+		const data = {
+			node_id: id,
+		};
+
+		// Send a message to the background script to open the chat
+		sendMessageToBackground(Constants.HANDLE_NODE_DELETION, data).then((response) => {
+			if (!response.status) {
+				showToast("Error deleting chat", "error");
+				return;
+			}else{
+				showToast("Chat deleted", "success");
 			}
 		});
 	};
@@ -78,6 +105,13 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 				onClick={handleOpenChat}
 			>
 				Open Chat
+			</button>
+
+			<button
+				className="border-0 block p-2 text-left w-full hover:bg-white"
+				onClick={handleDeleteChat}
+			>
+				Delete Chat
 			</button>
 		</div>
 	);

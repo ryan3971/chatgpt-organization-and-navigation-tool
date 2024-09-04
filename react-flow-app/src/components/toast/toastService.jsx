@@ -17,9 +17,9 @@ const borderColorMap = {
  * Displays a toast message.
  *
  * @param {string} message - The message to display in the toast.
- * @param {string} variant - The variant type of the toast ('info', 'error', 'success', etc.).
+ * @param {string} type - The variant type of the toast ('info', 'error', 'success', etc.).
  */
-export function showToast(message, variant = "info") {
+export function showToast(message, type = "info") {
 	// Create the toast container if it doesn't exist
 	if (!toastRoot) {
 		const container = document.createElement("div");
@@ -27,9 +27,11 @@ export function showToast(message, variant = "info") {
 		toastRoot = createRoot(container); // Create the root using React 18
 	}
 
+	console.log(`Showing toast message: ${message}`);
+	console.log(`Toast type: ${type}`);
 	// Get the corresponding border color based on the variant
-	const borderColor = borderColorMap[variant] || borderColorMap.info;
-
+	const borderColor = borderColorMap[type] || borderColorMap.info;
+	console.log(`Toast border color: ${borderColor}`);
 	// Generate a unique ID for the toast component
 	const toastId = Math.random().toString(12);
 
