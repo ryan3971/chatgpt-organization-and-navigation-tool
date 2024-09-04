@@ -297,7 +297,7 @@ function getNodeMessages() {
 			if (!conversationTurn) break;
 
 			const dataMessageId = conversationTurn.querySelector(CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE);
-			const text = dataMessageId?.textContent.trim().substring(0, 100) || "";
+			const text = dataMessageId?.textContent.substring(0, 100) || "";
 
 			const index = Math.floor(turnNumber / 2) - 1;
 			if (!nodeMessages[index]) {
