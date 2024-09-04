@@ -166,8 +166,9 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
 			let selectedTextContainerId = node.branches[branch_id].selectedTextContainerId;
 			selectedTextContainerId = Math.floor(selectedTextContainerId / 2);
 
-			if (selectedTextContainerId > messagesLength - 2) {
+			if (selectedTextContainerId > messagesLength - 2) {	// -2 because the last 2 messages are the overriding messages
 				node.branches[branch_id].isMessageOverwritten = true;
+				node.branches[branch_id].selectedTextContainerId = messagesLength; // reposition the branch to the last message
 				console.warn(`Branch message at container ${selectedTextContainerId} is overwritten`);
 			}
 		}
