@@ -37,7 +37,7 @@ const edgeTypes = {
 	"custom-edge": CustomEdge,
 };
 
-const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
+const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) => {
 	// State hooks for nodes and edges
 	const [nodes, setNodes, onNodesChange] = useNodesState([]);
 	const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -87,18 +87,24 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces }) => {
 
 				switch (key) {
 					case Constants.NODE_SPACES_KEY:
-						if (newValue) {
-							handleUpdateNodeSpaces(newValue);
-						} else {
+						if (!newValue) {	// If the node spaces are updated
 							handleUpdateNodeSpaces([]);
 							setNodes([]);
 							setEdges([]);
+						} else {	// If the node spaces are deleted
+							handleUpdateNodeSpaces(newValue);
 						}
 						break;
 					case activeSpace: {
-						const { nodesData, edgesData } = transformStorageData(newValue);
-						setNodes(nodesData);
-						setEdges(edgesData);
+						if (!newValue) {	// If the active space is deleted
+							handleUpdateActiveSpace(null);
+							setNodes([]);
+							setEdges([]);
+						} else {	// If the active space is updated
+							const { nodesData, edgesData } = transformStorageData(newValue);
+							setNodes(nodesData);
+							setEdges(edgesData);
+						}
 						break;
 					}
 					default:

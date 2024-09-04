@@ -92,6 +92,7 @@ const App = () => {
 			<Flow
 				activeSpace={activeSpace}
 				handleUpdateNodeSpaces={handleUpdateNodeSpaces}
+				handleUpdateActiveSpace={handleUpdateActiveSpace}
 			/>
 
 			{/* Side panel for managing node spaces */}
