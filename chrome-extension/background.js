@@ -8,8 +8,9 @@ import {
 	getNodeSpaces,
 	getNodeSpaceData,
 	updateNodeSpaceTitle,
+	pinNodeMessage,
 } from "./background_helpers/helper_functions.js";
-import * as Constants from "./Constants/constants.js";
+import * as Constants from "./constants/constants.js";
 
 /**
  * To account for multiple tabs, I need one state objects in background that will persist on tab changes
@@ -141,6 +142,11 @@ chrome.runtime.onInstalled.addListener(() => {
 			contexts: ["all"], // This menu item is available on all contexts
 		},
 		{
+			id: Constants.CONTEXT_MENU_PIN_MESSAGE,
+			title: "Pin Message",
+			contexts: ["all"], // This menu item is available on all contexts
+		},
+		{
 			id: Constants.CONTEXT_MENU_RESET,
 			title: "Reset",
 			contexts: ["all"], // This menu item is available on all contexts
@@ -180,6 +186,9 @@ function handleContextMenuClick(info, tab) {
 			break;
 		case Constants.CONTEXT_MENU_CREATE_BRANCH_NODE:
 			startNewBranchChat(info, tab);
+			break;
+		case Constants.CONTEXT_MENU_PIN_MESSAGE:
+			pinChatMessage(info, tab);
 			break;
 		case Constants.CONTEXT_MENU_RESET:
 			chrome.storage.local.clear(); // Temporary code to reset the storage
@@ -289,15 +298,15 @@ async function createParentNode(info, tab) {
 		if (!nodeTitleResponse || !nodeTitleResponse.status) {
 			console.error("Failed to get node title:", nodeTitleResponse);
 			notifyUser(Constants.ERROR, "Error getting node title.");
-			return;
+			// return;
 		}
 
-		const node_title = nodeTitleResponse.data;
-		if (!node_title) {
-			console.error("Node title is empty.");
-			notifyUser(Constants.ERROR, "Node title cannot be empty.");
-			return;
-		}
+		const node_title = nodeTitleResponse.data || "Untitled Chat";	// Backup to the backup in content script
+		// if (!node_title) {
+		// 	console.error("Node title is empty.");
+		// 	notifyUser(Constants.ERROR, "Node title cannot be empty.");
+		// 	return;
+		// }
 
 		// Create a new parent node
 		const node_space_id = await createNewNodeParent(node_id, node_title);
@@ -426,7 +435,7 @@ async function createBranchChat(node_data, data, tab_id) {
 			return false;
 		}
 
-		console.log("Branch Node Created");
+		notifyUser(Constants.SUCCESS, "Branch node created successfully");
 		return true;
 	} catch (error) {
 		console.error("Error in createBranchChat:", error);
@@ -434,6 +443,62 @@ async function createBranchChat(node_data, data, tab_id) {
 		return false;
 	}
 }
+
+/* Pin a chat message */
+async function pinChatMessage(info, tab) {
+	try {
+		// Get the node information from the content script
+		const nodeDataResponse = await sendMessage(tab.id, Constants.GET_NODE_DATA);
+		if (!nodeDataResponse || !nodeDataResponse.status) {
+			notifyUser(Constants.ERROR, "Error getting node data");
+			return;
+		}
+
+		const node_data = nodeDataResponse.data;
+
+		// Check what type of node it is
+		if (node_data.node_type !== Constants.NODE_TYPE_EXISTING) {
+			notifyUser(Constants.WARNING, "URL is not a known node. Cannot pin message");
+			return;
+		}
+
+		// Get information from the content script on the node and the message to pin
+		const pinMessageResponse = await sendMessage(tab.id, Constants.GET_MESSAGE_TO_PIN);
+		if (!pinMessageResponse || !pinMessageResponse.status) {
+			handlePinMessageError(pinMessageResponse.data);
+			return;
+		}
+		
+		// Message to pin is valid; extract the selected text and its container ID
+		const pinMessageContainerId = pinMessageResponse.data;
+		const { node_space_id, node_id } = node_data;
+
+		let response = await pinNodeMessage(node_space_id, node_id, pinMessageContainerId);
+		if (!response) {
+			notifyUser(Constants.ERROR, "Error pinning message");
+			return;
+		}
+
+		notifyUser(Constants.SUCCESS, "Message pinned successfully");
+
+	} catch (error) {
+		console.error("Error in pinChatMessage:", error);
+		notifyUser(Constants.ERROR, "Unexpected error while pinning chat message.");
+	}
+}
+
+/* Handle text selection errors */
+function handlePinMessageError(errorCode) {
+	switch (errorCode) {
+		case Constants.INVALID_PIN_MESSAGE_SELECTION:
+			notifyUser(Constants.ERROR, "Invalid text selected");
+			break;
+		default:
+			notifyUser(Constants.ERROR, "Unknown error while trying to pin message");
+	}
+}
+
+
 /* Update the chat messages */
 async function updateChatMessages(node_data, node_messages) {
 	try {
@@ -706,12 +771,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /***** Background Notifications ******/
-async function notifyUser(action_type, invalid_action_message) {
+async function notifyUser(type, message) {
+
+	const data = {
+		message: message,
+		type: type,
+	};
+
 	try {
-		const alert_message = `${action_type}: ${invalid_action_message}`;
 		const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
 		if (tabs.length > 0) {
-			const response = await sendMessage(tabs[0].id, Constants.ALERT, alert_message);
+			const response = await sendMessage(tabs[0].id, Constants.CHROME_TOAST, data);
 			if (!response?.status) {
 				console.error("Error sending alert message");
 			}

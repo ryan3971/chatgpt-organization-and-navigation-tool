@@ -20,7 +20,7 @@ const CHATGPT_BUTTON_DANGER_ATTRIBUTE = "button.btn-danger";
 const CHATGPT_BUTTON_DANGER_INNER_TEXT = "Delete";
 const CHATGPT_HREF_ATTRIBUTE = 'a[href*="/c/"]';
 const CHATGPT_DATA_TEST_ID_ATTRIBUTE = "data-testid";
-const CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE = '[data-message-id]';
+const CHATGPT_DATA_MESSAGE_ID_ATTRIBUTE = "[data-message-id]";
 const CHATGPT_HREF_ATTRIBUTE_START = 'a[href*="';
 const CHATGPT_MESSAGE_CONTAINER_START = '[data-testid="conversation-turn-';
 const HTML_GENERIC_CLOSING = '"]';
@@ -30,8 +30,20 @@ const HTML_HREF_ATTRIBUTE = "href";
 
 const CONTENT_SCRIPT_CONSTANTS = "content_script_constants";
 
+// Flag to check if a new branch is being created
 var isCreatingNewBranch = false;
 
+// Store the clicked element for context menu
+var clickedElement = null;
+
+// Define border colors for different message types
+const borderColorMap = {
+	info: "#90cdf4", // Light blue (border-blue-200)
+	error: "#feb2b2", // Light red (border-red-200)
+	success: "#9ae6b4", // Light green (border-green-200)
+	warning: "#fbd38d", // Light yellow (border-yellow-200)
+	// You can add more types here as needed
+};
 
 /***** Mutation Observer Section *****/
 
@@ -186,7 +198,6 @@ function getIDfromHref(elements) {
 
 	return navPanelIds;
 }
-
 
 // Callback function to execute when mutations are observed
 const callback = function (mutationsList, observer) {
@@ -376,19 +387,49 @@ async function focusChatMessageByTestId(message_index) {
 	if (focusElement()) return true;
 
 	console.log("Element not found, retrying in 3 seconds...");
-	await new Promise(resolve => setTimeout(resolve, 3000));
+	await new Promise((resolve) => setTimeout(resolve, 3000));
 
 	return focusElement();
 }
 
-function getNodeTitle(node_id)	{
+async function getPinnedMessage() {
+	const response = { flag: null, data: null };
+
+	// check if the clicked element is null
+	if (!clickedElement) {
+		response.flag = Constants.UNKNOWN_PIN_MESSAGE_ERROR;
+		return response;
+	}
+
+	try {
+		// Get the message element of the clicked element
+		const messageElement = findAncestorWithTestId(clickedElement);
+		console.log("Message Element:", messageElement);
+		// check if the clicked element is a message
+		if (messageElement.hasAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE)) {
+			const dataMessageId = messageElement.getAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE);
+			const pinnedMessageContainerId = parseInt(dataMessageId.match(/(\d+)/)[0], 10) - 2;
+
+			response.flag = Constants.VALID_PIN_MESSAGE;
+			response.data = pinnedMessageContainerId;
+
+			console.log("Pinned Message Container ID:", dataMessageId, pinnedMessageContainerId);
+		}
+	} catch (error) {
+		response.flag = Constants.INVALID_PIN_MESSAGE_SELECTION;
+	}
+
+	return response;
+}
+
+function getNodeTitle(node_id) {
 	try {
 		const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
 		const href = CHATGPT_HREF_ATTRIBUTE_START + node_id + HTML_GENERIC_CLOSING;
 		const navPanelElements = navPanel.querySelector(href);
 
 		console.log("Node Title from Nav Panel:", navPanel, href, navPanelElements);
-		
+
 		if (navPanelElements) {
 			return navPanelElements.innerText;
 		}
@@ -399,6 +440,57 @@ function getNodeTitle(node_id)	{
 	return tempStorage.node_title || document.title || "ChatGPT Chat";
 }
 
+/* Listener for right-click context menu */
+document.addEventListener(
+	"contextmenu",
+	(event) => {
+		clickedElement = event.target; // Store the clicked element
+		console.log("Clicked Element:", clickedElement);
+	},
+	true
+);
+
+// Function to show a toast message with a specific type
+function showToast(message, type = "info") {
+	// Get the border color based on the message type, default to 'info'
+	const borderColor = borderColorMap[type] || borderColorMap.info;
+	console.log("Showing toast:", message, type);
+	console.log("Border Color:", borderColor);
+	// Create the toast container if it doesn't exist
+	let toastContainer = document.getElementById("customToastContainer");
+	if (!toastContainer) {
+		toastContainer = document.createElement("div");
+		toastContainer.id = "customToastContainer";
+		document.body.appendChild(toastContainer);
+	}
+
+	// Create the toast element
+	const toast = document.createElement("div");
+	toast.id = "customToast";
+	toast.style.borderColor = borderColor; // Apply the corresponding border color
+	toast.innerHTML = `
+    <div class="toast-body">${message}</div>
+  `;
+
+	// Append the toast to the container
+	toastContainer.appendChild(toast);
+
+	// Show the toast
+	setTimeout(() => {
+		toast.classList.add("show");
+	}, 100); // Small delay to trigger the transition
+
+	// Hide the toast after a certain delay (3 seconds in this case)
+	setTimeout(() => {
+		toast.classList.remove("show");
+		toast.classList.add("hide");
+	}, 3000);
+
+	// Remove the toast from the DOM after it fades out
+	setTimeout(() => {
+		toast.remove();
+	}, 3500); // Wait for the fade-out transition to complete
+}
 
 /************** Message Send/Receive Section **************/
 
@@ -468,6 +560,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					sendResponse(response);
 				});
 				break;
+			case Constants.GET_MESSAGE_TO_PIN:
+				getPinnedMessage().then((pinned_message_response) => {
+					if (pinned_message_response.flag === Constants.VALID_PIN_MESSAGE) {
+						response.status = true;
+						response.data = pinned_message_response.data;
+					} else {
+						response.data = pinned_message_response.flag;
+					}
+					sendResponse(response);
+				});
+				break;
 			case Constants.UPDATE_NODE_MESSAGES:
 				const nodeMessages = getNodeMessages();
 				sendMessage(Constants.UPDATE_NODE_MESSAGES, nodeMessages).then(sendResponse);
@@ -478,8 +581,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					sendResponse(response);
 				});
 				break;
-			case Constants.ALERT:
-				alert(request.data);
+			case Constants.CHROME_TOAST:
+				const { message, type } = request.data;
+				showToast(message, type);
 				response.status = true;
 				sendResponse(response);
 				break;

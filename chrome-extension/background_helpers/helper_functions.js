@@ -1,5 +1,5 @@
 import { getFromStorage, setToStorage, removeFromStorage } from "../services/chromeStorageService.js";
-import * as Constants from "../Constants/constants.js";
+import * as Constants from "../constants/constants.js";
 
 /****** General Functions ******/
 export async function doesNodeExist(node_id) {
@@ -141,6 +141,43 @@ export async function createNewNodeBranch(node_space_id, parent_node_id, selecte
 	}
 }
 
+/***** Other Storage Objects *****/
+export async function pinNodeMessage(node_space_id, node_id, message_container_id)	{
+
+	try {
+		const spaceNodes = await getFromStorage(node_space_id);
+		if (!spaceNodes) {
+			console.error("Nodes not found in storage");
+			return false;
+		}
+
+		const node = spaceNodes[node_id];
+		if (!node) {
+			console.error("Node not found in storage");
+			return false;
+		}
+
+		// Get the message to pin, set it to true
+		const messageToPinIndex = Math.floor(message_container_id / 2);
+		const messageToPin = node.messages[messageToPinIndex][2] = true;
+		if (!messageToPin) {
+			console.error("Message to pin not found in storage");
+			return false;
+		}
+
+		// Save the updated node to storage
+		spaceNodes[node_id] = node;
+		const savedSpaceNodes = await setToStorage(node_space_id, spaceNodes);
+		if (!savedSpaceNodes) {
+			console.error("Failed to save updated node messages to storage");
+			return false;
+		}
+		return true;
+	} catch (error) {
+		console.error("Error in pinNodeMessage:", error);
+		return false;
+	}
+}
 
 /***** Update Storage Objects *****/
 export async function updateNodeMessages(node_space_id, node_id, messages) {
@@ -155,6 +192,17 @@ export async function updateNodeMessages(node_space_id, node_id, messages) {
 		if (!node) {
 			console.error("Node not found in storage");
 			return false;
+		}
+
+		// Iterate through each of the messages and save the pinned status of the message from what was in storage
+		for (let i = 0; i < messages.length; i++) {
+			try {
+				const pinnedMessage = node.messages[i][2];	// Get the pinned status of the message
+				messages[i][2] = pinnedMessage;				// Set the pinned status of the message
+			}
+			catch (error) {
+				messages[i][2] = false;						// Set the pinned status of the message to false if it was not found
+			}
 		}
 
 		// Update node with new messages

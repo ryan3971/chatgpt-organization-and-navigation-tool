@@ -31,7 +31,8 @@ export const IS_NEW_BRANCH = "is_new_branch";                               // M
 export const GET_NODE_TITLE = "get_node_title"; // Message to get the node title from content script
 export const GET_NODE_DATA = "get_node_data"; // Message to get the node data from content script
 export const GET_SELECTED_TEXT = "get_selected_text"; // Message to get the selected text from content script
-export const ALERT = "alert";                                               // Message to show an alert
+export const GET_MESSAGE_TO_PIN = "get_message_to_pin"; // Message to get the node messages from content script
+export const CHROME_TOAST = "chrome_toast";                                               // Message to show an alert
 
 /***** Selected Text Flags ******/
 export const MAX_TEXT_SELECTION_LENGTH = 100;                               // Maximum length of text that can be selected
@@ -41,11 +42,17 @@ export const TEXT_SPANS_MULTIPLE_MESSAGES = "text_spans_multiple_messages"; // T
 export const INVALID_TEXT_SELECTED = "invalid_text_selected";               // Invalid text selected (i.e., text outside of a message)
 export const VALID_TEXT_SELECTED = "valid_text_selected";                   // Valid text selected
 
+/***** Pin MEssage Flags ******/
+export const UNKNOWN_PIN_MESSAGE_ERROR = "unknown_pin_message_error";                   // Unknown message selected
+export const INVALID_PIN_MESSAGE_SELECTION = "invalid_pin_message_selection"; // Invalid text selected (i.e., text outside of a message)
+export const VALID_PIN_MESSAGE = "valid_pin_message";                         // Valid text selected
+
 /***** Chrome Context Menu Items ******/
 export const CONTEXT_MENU_CREATE_PARENT_NODE = "create_parent_node";        // Create a parent node
 export const CONTEXT_MENU_CREATE_BRANCH_NODE = "create_branch_node";        // Create a branch node
 export const CONTEXT_MENU_RESET = "reset";                                  // Reset Chrome storage
 export const CONTEXT_MENU_OPEN_GUI = "open_gui";                            // Open the ChatGPT GUI
+export const CONTEXT_MENU_PIN_MESSAGE = "pin_message";                      // Pin a message
 
 
 /****** Chat Type ******/
@@ -55,10 +62,10 @@ export const NODE_TYPE_EXISTING = "existing_node";                          // E
 export const NODE_TYPE_UNKNOWN = "unknown_node";                            //i.e., it's a node but not stored in the extension
 
 /****** User Notification Types ******/
-export const ERROR = "Error";                                           // Error notification
-export const INFO = "Info";                                             // Information notification
-export const SUCCESS = "Success";                                       // Success notification
-export const WARNING = "Warning";                                       // Warning notification
+export const ERROR = "error";                                           // Error notification
+export const INFO = "info";                                             // Information notification
+export const SUCCESS = "success";                                       // Success notification
+export const WARNING = "warning";                                       // Warning notification
 
 /****** React Application Messages ******/
 export const REACT_OPEN_CHAT = "open_chat";                             // Open the ChatGPT chat

@@ -1,6 +1,6 @@
 export async function getFromStorage(key) {
 	try {
-		const response = await chrome.storage.sync.get(key);
+		const response = await chrome.storage.local.get(key);
 		console.log("Response from getting storage in getFromStorage", response);
 
 		// Return null if the response is empty
@@ -21,7 +21,7 @@ export async function setToStorage(data_key, data) {
 	dataObj[data_key] = data;
 
 	try {
-		const response = await chrome.storage.sync.set(dataObj);
+		const response = await chrome.storage.local.set(dataObj);
 		console.log("Saved to storage in setToStorage");
 		return true;
 	} catch (error) {
@@ -32,7 +32,7 @@ export async function setToStorage(data_key, data) {
 
 export async function removeFromStorage(key) {
 	try {
-		const response = await chrome.storage.sync.remove(key);
+		const response = await chrome.storage.local.remove(key);
 		console.log("Removed from storage in removeFromStorage");
 		return true;
 	} catch (error) {
