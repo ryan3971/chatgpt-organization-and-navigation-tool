@@ -10,6 +10,9 @@ var tempStorage = {
 };
 
 /* ChatGPT HTML element selectors */
+const CHATGPT_ORIGIN = "https://chatgpt.com";
+const CHATGPT_HOSTNAME = "chatgpt.com";
+
 const CHATGPT_STOP_BUTTON_ELEMENT = '[data-testid="stop-button"]';
 const CHATGPT_NAV_PANEL_ELEMENT = "nav[class]";
 const CHATGPT_TITLE_INPUT_ELEMENT = 'input[type="text"]';
@@ -221,13 +224,10 @@ function observeTitleChange() {
 					ensureConstants();
 
 					// Send the new title to the background script if this is a known node
-					if (
-						document.title !== "ChatGPT" &&
-						document.title !== tempStorage.node_title &&
-						tempStorage.node_type === Constants.NODE_TYPE_EXISTING
-					) {
+					if (document.title !== "ChatGPT" && document.title !== tempStorage.node_title) {
 						tempStorage.node_title = document.title;
-						sendMessage(Constants.UPDATE_NODE_TITLE, { node_id: tempStorage.node_id, new_title: document.title });
+						if (tempStorage.node_type === Constants.NODE_TYPE_EXISTING)
+							sendMessage(Constants.UPDATE_NODE_TITLE, { node_id: tempStorage.node_id, new_title: document.title });
 					}
 				}
 			}
@@ -250,13 +250,13 @@ async function createNewBranchNode(navPanel) {
 	console.log("Creating new branch node");
 
 	try {
+		// Wait for the node title to be updated in the nav panel and the url to update
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
 		const url = new URL(window.location.href);
 		const nodeId = url.pathname;
 		const nodeHref = CHATGPT_HREF_ATTRIBUTE_START + nodeId + HTML_GENERIC_CLOSING;
 
-		// Wait for the node title to be updated in the nav panel
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-		
 		let nodeTitle = "ChatGPT Chat";
 		try {
 			nodeTitle = navPanel.querySelector(nodeHref)?.innerText || nodeTitle;
@@ -381,6 +381,23 @@ async function focusChatMessageByTestId(message_index) {
 	return focusElement();
 }
 
+function getNodeTitle(node_id)	{
+	try {
+		const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
+		const href = CHATGPT_HREF_ATTRIBUTE_START + node_id + HTML_GENERIC_CLOSING;
+		const navPanelElements = navPanel.querySelector(href);
+
+		console.log("Node Title from Nav Panel:", navPanel, href, navPanelElements);
+		
+		if (navPanelElements) {
+			return navPanelElements.innerText;
+		}
+	} catch (error) {
+		console.error("Error in getting Node Title from Nav Panel. Using Default instead:", error);
+	}
+
+	return tempStorage.node_title || document.title || "ChatGPT Chat";
+}
 
 
 /************** Message Send/Receive Section **************/
@@ -423,8 +440,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				sendResponse(response);
 				break;
 			case Constants.GET_NODE_TITLE:
+				response.data = getNodeTitle(data.node_id);
 				response.status = true;
-				response.data = tempStorage.node_title || document.title || "ChatGPT Chat";
 				sendResponse(response);
 				break;
 			case Constants.GET_NODE_DATA:

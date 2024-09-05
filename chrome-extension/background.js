@@ -182,7 +182,7 @@ function handleContextMenuClick(info, tab) {
 			startNewBranchChat(info, tab);
 			break;
 		case Constants.CONTEXT_MENU_RESET:
-			chrome.storage.sync.clear(); // Temporary code to reset the storage
+			chrome.storage.local.clear(); // Temporary code to reset the storage
 			console.log("Storage reset successfully.");
 			break;
 		default:
@@ -285,7 +285,7 @@ async function createParentNode(info, tab) {
 		}
 
 		// Send a message to get the node title
-		const nodeTitleResponse = await sendMessage(tab.id, Constants.GET_NODE_TITLE);
+		const nodeTitleResponse = await sendMessage(tab.id, Constants.GET_NODE_TITLE, {node_id: node_id});
 		if (!nodeTitleResponse || !nodeTitleResponse.status) {
 			console.error("Failed to get node title:", nodeTitleResponse);
 			notifyUser(Constants.ERROR, "Error getting node title.");
