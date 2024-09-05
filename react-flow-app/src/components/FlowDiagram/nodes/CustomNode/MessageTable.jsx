@@ -17,7 +17,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 	}, [messages, refs]);
 
 	// Function to render a message button based on its index
-	const renderButton = (index, message) => {
+	const renderButton = (index, message, isPinnedMessage) => {
 		const isUser = index % 2 === 0; // Determine if the message is from the user (even index)
 		const commonStyles = "w-5 h-5 transition-colors duration-200"; // Shared styles for all buttons
 
@@ -25,17 +25,25 @@ const MessageTable = ({ node_id, messages, refs }) => {
 			<div className="flex justify-center">
 				{isUser ? (
 					<MessageButton
+						className="border-"
 						node_id={node_id}
 						message={message}
 						message_index={index}
-						style={`${commonStyles} bg-blue-100 rounded-t-full hover:bg-blue-300 hover:border-blue-300`}
+						style={`
+							${commonStyles} 
+							${isPinnedMessage ? "border-yellow-300 hover:border-yellow-300" : "hover:border-blue-300"} 
+							rounded-t-full bg-blue-100 hover:bg-blue-300 
+							`}
 					/>
 				) : (
 					<MessageButton
 						node_id={node_id}
 						message={message}
 						message_index={index}
-						style={`${commonStyles} bg-neutral-500 rounded-b-full hover:bg-neutral-700 hover:border-neutral-700`}
+						style={`
+							${commonStyles} 
+							${isPinnedMessage ? "border-yellow-300 hover:border-yellow-300" : "hover:border-neutral-700"} 
+							rounded-b-full bg-neutral-500 hover:bg-neutral-700`}
 					/>
 				)}
 			</div>
@@ -48,6 +56,7 @@ const MessageTable = ({ node_id, messages, refs }) => {
 				{messages.map((msg, index) => {
 					const userMessage = msg[0];
 					const gptMessage = msg[1];
+					const isPinnedMessage = msg[2] || false;
 
 					return (
 						<Col
@@ -56,8 +65,8 @@ const MessageTable = ({ node_id, messages, refs }) => {
 							className="pb-2"
 						>
 							{/* Render the user and GPT message buttons */}
-							{renderButton(index * 2, userMessage)}
-							{renderButton(index * 2 + 1, gptMessage)}
+							{renderButton(index * 2, userMessage, isPinnedMessage)}
+							{renderButton(index * 2 + 1, gptMessage, isPinnedMessage)}
 						</Col>
 					);
 				})}
