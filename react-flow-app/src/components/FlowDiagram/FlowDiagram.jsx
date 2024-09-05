@@ -63,7 +63,7 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 		sendMessageToBackground(Constants.GET_NODE_SPACE_DATA, { space_id: activeSpace })
 			.then((response) => {
 				if (!response.status) {
-					showToast("Error retrieving node data", { type: "error" });
+					showToast("Error retrieving node data", "error");
 					return;
 				}
 
@@ -74,7 +74,7 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 			})
 			.catch((error) => {
 				console.error("Unexpected error while retrieving node data:", error);
-				showToast("An unexpected error occurred", { type: "error" });
+				showToast("An unexpected error occurred", "error");
 			});
 	}, [activeSpace, setNodes, setEdges]);
 
@@ -87,20 +87,24 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 
 				switch (key) {
 					case Constants.NODE_SPACES_KEY:
-						if (!newValue) {	// If the node spaces are updated
+						if (!newValue) {
+							// If the node spaces are updated
 							handleUpdateNodeSpaces([]);
 							setNodes([]);
 							setEdges([]);
-						} else {	// If the node spaces are deleted
+						} else {
+							// If the node spaces are deleted
 							handleUpdateNodeSpaces(newValue);
 						}
 						break;
 					case activeSpace: {
-						if (!newValue) {	// If the active space is deleted
+						if (!newValue) {
+							// If the active space is deleted
 							handleUpdateActiveSpace(null);
 							setNodes([]);
 							setEdges([]);
-						} else {	// If the active space is updated
+						} else {
+							// If the active space is updated
 							const { nodesData, edgesData } = transformStorageData(newValue);
 							setNodes(nodesData);
 							setEdges(edgesData);
@@ -121,7 +125,7 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 		return () => {
 			chrome.storage.onChanged.removeListener(handleStorageChange);
 		};
-	}, [activeSpace, handleUpdateNodeSpaces, setNodes, setEdges]);
+	}, [activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace, setNodes, setEdges]);
 
 	// Callback to handle selection changes in nodes
 	const onChange = useCallback(

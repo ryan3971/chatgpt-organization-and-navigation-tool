@@ -14,7 +14,6 @@ import * as Constants from "../../../../util/constants";
 const CustomNode = ({ id, data, selected }) => {
 	const { title, messages, selectedTextContainerIds, isParent } = data;
 	const refs = useRef({});
-	const rerenderHandleRef = useRef([]); // Ref to trigger re-renders
 
 	const updateNodeInternals = useUpdateNodeInternals();
 
@@ -41,13 +40,13 @@ const CustomNode = ({ id, data, selected }) => {
 		sendMessageToBackground(Constants.HANDLE_OPEN_NODE_CHAT, data)
 			.then((response) => {
 				if (!response.status) {
-					showToast("Error opening chat", { type: "error" });
+					showToast("Error opening chat", "error");
 					return;
 				}
 			})
 			.catch((error) => {
 				console.error("Unexpected error opening chat:", error);
-				showToast("An unexpected error occurred", { type: "error" });
+				showToast("An unexpected error occurred", "error");
 			});
 	}
 
@@ -101,6 +100,7 @@ const CustomNode = ({ id, data, selected }) => {
 						targetRef={targetRef}
 						containerId={columnIndex}
 						sourceHandle={sourceHandle}
+						messageLength={messages.length}
 					/>
 				);
 			})}

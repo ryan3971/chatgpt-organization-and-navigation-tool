@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
-const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle }) => {
+const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle, messageLength }) => {
 	const updateNodeInternals = useUpdateNodeInternals();
 	const [positionStyle, setPositionStyle] = useState({});
 
 	// useEffect to calculate and set the position of the handle relative to its target element
 	// This effect runs when the component mounts and whenever the targetRef, node_id, or containerId changes.
+	console.log("In CustomHandle with containerId: ", containerId);
+
 	useEffect(() => {
-		console.log
+		console.log("CustomHandle useEffect called");
 		if (targetRef && targetRef.current) {
 			// Get the bounding box of the target element (e.g., a button)
 			const targetRect = targetRef.current.getBoundingClientRect();
@@ -29,7 +31,7 @@ const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle }) => {
 			// Trigger an update of the node's internals after positioning the handle
 			updateNodeInternals(node_id);
 		}
-	}, [targetRef, node_id, containerId, updateNodeInternals]);
+	}, [targetRef, node_id, containerId, updateNodeInternals, messageLength]);
 
 	return (
 		<Handle
