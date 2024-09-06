@@ -445,7 +445,6 @@ document.addEventListener(
 	"contextmenu",
 	(event) => {
 		clickedElement = event.target; // Store the clicked element
-		console.log("Clicked Element:", clickedElement);
 	},
 	true
 );
@@ -454,8 +453,7 @@ document.addEventListener(
 function showToast(message, type = "info") {
 	// Get the border color based on the message type, default to 'info'
 	const borderColor = borderColorMap[type] || borderColorMap.info;
-	console.log("Showing toast:", message, type);
-	console.log("Border Color:", borderColor);
+
 	// Create the toast container if it doesn't exist
 	let toastContainer = document.getElementById("customToastContainer");
 	if (!toastContainer) {

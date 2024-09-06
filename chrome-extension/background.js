@@ -113,7 +113,7 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		}
 
 		// Scroll to the message index if navigating from the React app
-		if (state.navigatedChat.tab === tabId) {
+		if (state.navigatedChat.tab.id === tabId) {
 			console.log("Navigating to message index:", state.navigatedChat.messageIndex);
 			navigateToNodeChatCallback(state.navigatedChat.tab, state.navigatedChat.messageIndex);
 			state.navigatedChat = { tab: null, messageIndex: null };
@@ -128,7 +128,7 @@ chrome.runtime.onInstalled.addListener(() => {
 	const contextMenuItems = [
 		{
 			id: Constants.CONTEXT_MENU_OPEN_GUI,
-			title: "Open GUI",
+			title: "Open Flow",
 			contexts: ["all"], // This menu item is available on all contexts
 		},
 		{
@@ -146,11 +146,11 @@ chrome.runtime.onInstalled.addListener(() => {
 			title: "Pin Message",
 			contexts: ["all"], // This menu item is available on all contexts
 		},
-		{
-			id: Constants.CONTEXT_MENU_RESET,
-			title: "Reset",
-			contexts: ["all"], // This menu item is available on all contexts
-		},
+		// {
+		// 	id: Constants.CONTEXT_MENU_RESET,
+		// 	title: "Reset",
+		// 	contexts: ["all"], // This menu item is available on all contexts
+		// },
 	];
 
 	// Create each context menu item
@@ -269,9 +269,9 @@ async function createParentNode(info, tab) {
 		}
 
 		const node_id = url.pathname;
-		if (!node_id) {
+		if (!node_id || node_id === "/") {
 			console.error("Unable to extract node ID from URL:", url);
-			notifyUser(Constants.ERROR, "Unable to extract node ID.");
+			notifyUser(Constants.ERROR, "Unable to extract node ID. Is this a new chat?");
 			return;
 		}
 

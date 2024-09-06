@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "ChatGPT Navigator",
 	"version": "1.0",
-	"permissions": ["activeTab", "scripting", "storage", "tabs", "contextMenus", "webNavigation", "notifications"],
+	"permissions": ["activeTab", "storage", "tabs", "contextMenus", "webNavigation", "unlimitedStorage"],
 	"icons": {
 		"16": "gpt_logo.png",
 		"32": "gpt_logo.png",
@@ -16,7 +16,9 @@
 	"content_scripts": [
 		{
 			"matches": ["https://chatgpt.com/*"],
-			"js": ["content.js"]
+			"js": ["content.js"],
+			"css": ["style/toast.css"]
+
 		}
 	],
 
