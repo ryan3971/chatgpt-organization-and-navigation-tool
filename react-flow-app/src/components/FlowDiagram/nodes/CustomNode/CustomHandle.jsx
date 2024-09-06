@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
 
 const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle, messageLength }) => {
@@ -10,7 +11,6 @@ const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle, messageLe
 	console.log("In CustomHandle with containerId: ", containerId);
 
 	useEffect(() => {
-		console.log("CustomHandle useEffect called");
 		if (targetRef && targetRef.current) {
 			// Get the bounding box of the target element (e.g., a button)
 			const targetRect = targetRef.current.getBoundingClientRect();
@@ -18,7 +18,6 @@ const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle, messageLe
 
 			// Calculate the width percentage of the target relative to its parent
 			const columnPercent = targetRect.width / parentRect.width;
-			console.log("Column Percent in CustomHandle: ", columnPercent);
 
 			// Calculate the handle's position as a percentage of the parent's width
 			setPositionStyle({
@@ -47,3 +46,11 @@ const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle, messageLe
 };
 
 export default CustomHandle;
+
+CustomHandle.propTypes = {
+	node_id: PropTypes.string.isRequired,
+	targetRef: PropTypes.object.isRequired,
+	containerId: PropTypes.number.isRequired,
+	sourceHandle: PropTypes.string.isRequired,
+	messageLength: PropTypes.number.isRequired,
+};

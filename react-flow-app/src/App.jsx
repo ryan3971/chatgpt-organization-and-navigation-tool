@@ -7,12 +7,6 @@ import { sendMessageToBackground } from "./util/chromeMessagingService";
 import * as Constants from "./util/constants";
 import { Button } from "react-bootstrap";
 
-// Initial node spaces structure, can be populated as needed.
-const initialNodeSpaces = {
-	node_1: { title: "Node 1 Title Extra Long Title" },
-	node_2: { title: "Node 2" },
-};
-
 /**
  * Main entry point of the application.
  * @returns {JSX.Element} The rendered App component.

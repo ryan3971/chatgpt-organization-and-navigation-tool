@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import PropTypes from "prop-types";
+
 import * as Constants from "../../../util/constants";
 import { sendMessageToBackground } from "../../../util/chromeMessagingService";
 import { showToast } from "../../toast/toastService"; // Ensure the correct path to your toast function
@@ -116,3 +118,12 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 		</div>
 	);
 }
+
+NodeContextMenu.propTypes = {
+	id: PropTypes.string.isRequired,
+	top: PropTypes.number.isRequired,
+	left: PropTypes.number.isRequired,
+	right: PropTypes.number.isRequired,
+	bottom: PropTypes.number.isRequired,
+	onCloseContextMenu: PropTypes.func.isRequired,
+};

@@ -10,6 +10,7 @@ import {
 	getConnectedEdges,
 	useOnSelectionChange,
 } from "@xyflow/react";
+import PropTypes from "prop-types";
 import { useState, useEffect, useRef, useCallback } from "react";
 import "@xyflow/react/dist/style.css";
 
@@ -189,23 +190,6 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 		}
 	}, [forceRender, nodes, edges, setEdges, setNodes]);
 
-	// // useEffect to listen for clicks outside of nodes to close the context menu
-	// useEffect(() => {
-	// 	// Function to close the context menu when a click is detected outside
-	// 	const handleOutsideClick = () => {
-	// 		console.log("Clicked outside");
-	// 		onCloseContextMenu(); // Close the context menu
-	// 	};
-
-	// 	// Listen for mousedown events
-	// 	window.addEventListener("mousedown", handleOutsideClick, true);
-
-	// 	// Cleanup the event listener on component unmount
-	// 	return () => {
-	// 		window.removeEventListener("mousedown", handleOutsideClick, true);
-	// 	};
-	// }, [onCloseContextMenu]);
-
 	return (
 		<div className="w-screen h-screen">
 			<ReactFlow
@@ -234,3 +218,9 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 };
 
 export default Flow;
+
+Flow.propTypes = {
+	activeSpace: PropTypes.string,
+	handleUpdateNodeSpaces: PropTypes.func,
+	handleUpdateActiveSpace: PropTypes.func,
+};

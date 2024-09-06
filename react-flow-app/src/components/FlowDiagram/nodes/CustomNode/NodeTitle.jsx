@@ -1,6 +1,14 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useRef } from "react";
+import PropTypes from "prop-types";
 
+/**
+ * Title component.
+ * @component
+ * @param {Object} props - The component props.
+ * @param {string} props.title - The title to display.
+ * @returns {JSX.Element} The rendered Title component.
+ */
 const Title = ({ title }) => {
 	const titleRef = useRef(null); // Reference to the title div
 
@@ -18,3 +26,7 @@ const Title = ({ title }) => {
 };
 
 export default Title;
+
+Title.propTypes = {
+	title: PropTypes.string.isRequired,
+};

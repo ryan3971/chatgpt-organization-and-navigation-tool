@@ -1,9 +1,20 @@
 import { useState, useRef } from "react";
 import ReactDOM from "react-dom";
+import PropTypes from "prop-types";
 import { sendMessageToBackground } from "../../../../util/chromeMessagingService";
 import * as Constants from "../../../../util/constants";
 import { showToast } from "../../../toast/toastService"; // Ensure the correct path to your toast function
 
+/**
+ * MessageButton component.
+ * @component
+ * @param {Object} props - The component props.
+ * @param {string} props.node_id - The ID of the node.
+ * @param {string} props.message - The message to display in the tooltip.
+ * @param {number} props.message_index - The index of the message.
+ * @param {string} props.style - The style of the button.
+ * @returns {JSX.Element} The rendered MessageButton component.
+ */
 const MessageButton = ({ node_id, message, message_index, style }) => {
 	const [showTooltip, setShowTooltip] = useState(false);
 	const [tooltipPosition, setTooltipPosition] = useState({ top: -9999, left: -9999 });
@@ -15,8 +26,6 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 
 	// Handle button click to send a message to the background script
 	const handleButtonClick = () => {
-		console.log(`User button clicked at index ${message_index}:`);
-
 		const data = {
 			node_id: node_id,
 			message_index: message_index,
@@ -140,3 +149,10 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 };
 
 export default MessageButton;
+
+MessageButton.propTypes = {
+	node_id: PropTypes.string.isRequired,
+	message: PropTypes.string.isRequired,
+	message_index: PropTypes.number.isRequired,
+	style: PropTypes.string.isRequired,
+};

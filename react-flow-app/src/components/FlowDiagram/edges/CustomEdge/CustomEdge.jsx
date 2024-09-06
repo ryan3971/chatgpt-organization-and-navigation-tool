@@ -1,4 +1,5 @@
 import { BaseEdge, getBezierPath, EdgeLabelRenderer } from "@xyflow/react";
+import PropTypes from "prop-types";
 
 /**
  * CustomEdge component represents a custom edge in the flow diagram.
@@ -67,3 +68,16 @@ export default function CustomEdge({ id, sourceX, sourceY, targetX, targetY, dat
 		</>
 	);
 }
+
+CustomEdge.propTypes = {
+	id: PropTypes.string.isRequired,
+	sourceX: PropTypes.number.isRequired,
+	sourceY: PropTypes.number.isRequired,
+	targetX: PropTypes.number.isRequired,
+	targetY: PropTypes.number.isRequired,
+	data: PropTypes.shape({
+		isMessageOverwritten: PropTypes.bool,
+		isSelected: PropTypes.bool,
+		selectedText: PropTypes.string,
+	}),
+};

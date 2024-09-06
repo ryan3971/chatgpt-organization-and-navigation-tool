@@ -1,5 +1,17 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import PropTypes from "prop-types";
 
+/**
+ * PanelContextMenu component.
+ * @component
+ * @param {Object} props - The component props.
+ * @param {boolean} props.visible - Indicates if the context menu is visible.
+ * @param {number} props.x - The x-coordinate of the context menu.
+ * @param {number} props.y - The y-coordinate of the context menu.
+ * @param {Function} props.onClose - The function to close the context menu.
+ * @param {Function} props.onRenameSpace - The function to rename the space.
+ * @returns {JSX.Element} The rendered PanelContextMenu component.
+ */
 const PanelContextMenu = ({ visible, x, y, onClose, onRenameSpace }) => {
 	// If the context menu is not visible, do not render anything
 	if (!visible) return null;
@@ -42,3 +54,11 @@ const PanelContextMenu = ({ visible, x, y, onClose, onRenameSpace }) => {
 };
 
 export default PanelContextMenu;
+
+PanelContextMenu.propTypes = {
+	visible: PropTypes.bool.isRequired,
+	x: PropTypes.number.isRequired,
+	y: PropTypes.number.isRequired,
+	onClose: PropTypes.func.isRequired,
+	onRenameSpace: PropTypes.func.isRequired,
+};

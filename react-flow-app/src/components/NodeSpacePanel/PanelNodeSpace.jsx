@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Image, Form } from "react-bootstrap";
-import ContextMenu from "./PanelContextMenu"; // Import the new ContextMenu component
+import PropTypes from "prop-types";
 
+import ContextMenu from "./PanelContextMenu"; // Import the new ContextMenu component
 import * as Constants from "../../util/constants";
 import { sendMessageToBackground } from "../../util/chromeMessagingService";
 import { showToast } from "../toast/toastService";
 
+/**
+ * PanelNodeSpace component.
+ * @component
+ * @param {Object} props - The component props.
+ * @param {string} props.id - The ID of the node space.
+ * @param {Function} props.onClick - The function to handle node space click.
+ * @param {string} props.title - The title of the node space.
+ * @param {string} props.imageUrl - The URL of the image to display.
+ * @param {string} props.activeSpace - The ID of the active node space.
+ * @param {string} props.infoText - The text to display in the node space.
+ * @returns {JSX.Element} The rendered PanelNodeSpace component.
+ */
 export const PanelNodeSpace = ({ id, onClick, title, imageUrl, activeSpace, infoText }) => {
 	const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
 	const [isEditing, setIsEditing] = useState(false);
@@ -124,3 +137,12 @@ export const PanelNodeSpace = ({ id, onClick, title, imageUrl, activeSpace, info
 };
 
 export default PanelNodeSpace;
+
+PanelNodeSpace.propTypes = {
+	id: PropTypes.string.isRequired,
+	onClick: PropTypes.func.isRequired,
+	title: PropTypes.string.isRequired,
+	imageUrl: PropTypes.string.isRequired,
+	activeSpace: PropTypes.string.isRequired,
+	infoText: PropTypes.string.isRequired,
+};

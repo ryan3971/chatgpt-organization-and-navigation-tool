@@ -1,9 +1,19 @@
 import React, { useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Container, Row, Col } from "react-bootstrap";
+import PropTypes from "prop-types";
 
 import MessageButton from "./MessageButton";
 
+/**
+ * MessageTable component.
+ * @component
+ * @param {Object} props - The component props.
+ * @param {string} props.node_id - The ID of the node.
+ * @param {Array} props.messages - The messages to display in the table.
+ * @param {Object} props.refs - The references for each message button.
+ * @returns {JSX.Element} The rendered MessageTable component.
+ */
 const MessageTable = ({ node_id, messages, refs }) => {
 	// Effect to create references for each message button
 	useEffect(() => {
@@ -76,3 +86,9 @@ const MessageTable = ({ node_id, messages, refs }) => {
 };
 
 export default MessageTable;
+
+MessageTable.propTypes = {
+	node_id: PropTypes.string.isRequired,
+	messages: PropTypes.array.isRequired,
+	refs: PropTypes.object.isRequired,
+};
