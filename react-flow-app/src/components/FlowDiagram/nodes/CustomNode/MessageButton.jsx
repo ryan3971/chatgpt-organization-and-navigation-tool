@@ -42,7 +42,6 @@ const MessageButton = ({ node_id, message, message_index, style }) => {
 					showToast("Error opening chat", "error");
 					return;
 				}
-				console.log("Message sent to background script");
 			})
 			.catch((error) => {
 				console.error("Error opening chat:", error);

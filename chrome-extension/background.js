@@ -34,15 +34,21 @@ let branchParentData = {
 	selected_text_data: null,
 };
 
+let loadingTabs = [];
+
 /***** Chrome Listeners ******/
 
 /* Listen for Tab Updates */
 chrome.tabs.onUpdated.addListener(handleTabUpdate);
 async function handleTabUpdate(tabId, changeInfo, tab) {
 	try {
-		console.log("Tab status:", tabId, changeInfo, tab);
-		console.log("Tab updated:", tabId, changeInfo, tab);
-		if (changeInfo.status !== "complete") return; // Wait for the page to load completely
+		// is the tab in the is loading state
+
+
+		if (changeInfo.status !== "complete" || loadingTabs.includes(tabId)) return; // Wait for the page to load completely
+
+		loadingTabs.push(tabId);	// prevent multiple calls to the same tab
+
 		// New webpage open, is it ChatGPT?
 		const url = new URL(tab.url);
 		const hostname = url.hostname; // e.g., chatgpt.com
@@ -61,7 +67,6 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 			throw new Error("Error checking if new branch is being created");
 		}
 		if (response.data) {
-			console.log("New branch node creation in progress...");
 			return;
 		}
 
@@ -113,15 +118,17 @@ async function handleTabUpdate(tabId, changeInfo, tab) {
 		}
 
 		// Scroll to the message index if navigating from the React app
-		if (state.navigatedChat.tab.id === tabId) {
-			console.log("Navigating to message index:", state.navigatedChat.messageIndex);
+		if (state.navigatedChat.tab?.id === tabId) {
 			navigateToNodeChatCallback(state.navigatedChat.tab, state.navigatedChat.messageIndex);
 			state.navigatedChat = { tab: null, messageIndex: null };
 		}
 	} catch (error) {
 		console.error("Error in handleTabUpdate:", error);
 	}
+	// remove the tab from the loadingTabs array
+	loadingTabs = loadingTabs.filter((tab) => tab !== tabId);
 }
+
 
 /* Context Menu Setup */
 chrome.runtime.onInstalled.addListener(() => {
@@ -175,8 +182,6 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 
 function handleContextMenuClick(info, tab) {
-	console.log("Chrome context menu item clicked:", info.menuItemId);
-
 	switch (info.menuItemId) {
 		case Constants.CONTEXT_MENU_OPEN_GUI:
 			openOverviewWindow();
@@ -192,7 +197,6 @@ function handleContextMenuClick(info, tab) {
 			break;
 		case Constants.CONTEXT_MENU_RESET:
 			chrome.storage.local.clear(); // Temporary code to reset the storage
-			console.log("Storage reset successfully.");
 			break;
 		default:
 			console.error("Unknown context menu item clicked:", info.menuItemId);
@@ -207,7 +211,6 @@ async function openOverviewWindow() {
 	try {
 		// Check if the window already exists
 		if (state.reactWindowId) {
-			console.log("React window already exists. Focusing on it.");
 			await chrome.windows.update(state.reactWindowId, { focused: true });
 			return true;
 		}
@@ -217,16 +220,14 @@ async function openOverviewWindow() {
 		if (tabs.length > 0) {
 			const tab = tabs[0];
 			state.lastActiveChatTabId = tab.id;
-			console.log("Active tab before React app opens: ", tab);
 		}
-
-		console.log("Action button clicked. Opening window.");
 
 		// Create a new window for the React application
 		const window = await chrome.windows.create({
 			url: "index.html",
 			type: "popup",
 			state: "maximized",
+		
 		});
 
 		// Save the React window ID in the state
@@ -242,13 +243,11 @@ chrome.windows.onRemoved.addListener(handleOverviewWindowClose);
 function handleOverviewWindowClose(windowId) {
 	if (windowId === state.reactWindowId) {
 		state.reactWindowId = null;
-		console.log("React window was closed.");
 	}
 }
 
 /* Event Handlers */
 async function createParentNode(info, tab) {
-	console.log("Setting Parent Node");
 
 	try {
 		// Ensure that the page URL is available
@@ -337,7 +336,6 @@ async function createParentNode(info, tab) {
 			return;
 		}
 
-		console.log("Parent Node Created Successfully.");
 		notifyUser(Constants.SUCCESS, "Parent node created successfully.");
 	} catch (error) {
 		console.error("Unexpected error in createParentNode:", error);
@@ -576,10 +574,7 @@ async function getNodeSpaceKeys() {
 
 		if (response?.status) {
 			const { node_space_id } = response.data;
-			console.log("Found active space:", node_space_id);
 			active_node_space = node_space_id;
-		} else {
-			console.log("Couldn't retrieve info on the active tab.");
 		}
 
 		return { node_space_keys, active_node_space };
@@ -605,8 +600,6 @@ function navigateToNodeChatCallback(tab, message_index) {
 
 	if (message_index === null) return;
 
-	console.log("Sending message to content script to navigate to message index:", message_index);
-
 	sendMessage(tab.id, Constants.SCROLL_TO_CHAT_MESSAGE, message_index)
 		.then((response) => {
 			if (!response?.status) {
@@ -622,7 +615,6 @@ function navigateToNodeChatCallback(tab, message_index) {
 async function handleOpenNodeChat(node_id, message_index) {
 	try {
 		const tabs = await chrome.tabs.query({ url: `${Constants.CHATGPT_ORIGIN}${node_id}` });
-		console.log("Tabs with the node id in the URL:", tabs);
 
 		if (tabs.length > 0) {
 			// Update the tab and handle navigation after the tab is updated (set it to active)
@@ -673,11 +665,8 @@ async function sendMessage(tabId, message_key, message_data = null) {
 		data: message_data,
 	};
 
-	console.log("Sending message to Content Script:", message);
-
 	try {
 		const response = await chrome.tabs.sendMessage(tabId, message);
-		console.log("Response from content script in sendMessage:", response.status);
 		return response;
 	} catch (error) {
 		console.error("Error sending message in sendMessage:", error);
@@ -701,34 +690,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 	const data = message.data;
 
-	console.log("Received message in Background Script:", message);
-
 	const handleMessage = async () => {
 		try {
 			switch (message.action) {
 				case Constants.UPDATE_NODE_MESSAGES:
-					console.log("Received message to update node messages");
 					response.status = await updateChatMessages(node_data, data);
 					break;
 				case Constants.UPDATE_NODE_TITLE:
-					console.log("Received message to update node title");
 					response.status = await updateChatTitle(data);
 					break;
 				case Constants.HANDLE_NEW_BRANCH_CREATION:
-					console.log("Received message to handle new branch creation");
 					const tab_id = sender.tab.id;
 					response.status = await createBranchChat(node_data, data, tab_id);
 					break;
 				case Constants.UPDATE_NODE_TITLE:
-					console.log("Received message to update node title");
 					response.status = await updateChatTitle(data);
 					break;
 				case Constants.HANDLE_NODE_DELETION:
-					console.log("Received message to delete node");
 					response.status = await deleteChat(data);
 					break;
 				case Constants.REACT_APP_MOUNTED:
-					console.log("Received message that React application mounted");
 					const space_data = await getNodeSpaceKeys();
 					if (space_data) {
 						response.status = true;
@@ -736,7 +717,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 					}
 					break;
 				case Constants.GET_NODE_SPACE_DATA:
-					console.log("Received message from React application to get node space data");
 					const node_space_data = await getNodeSpace(data.space_id);
 					if (node_space_data) {
 						response.status = true;
@@ -744,11 +724,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 					}
 					break;
 				case Constants.HANDLE_OPEN_NODE_CHAT:
-					console.log("Received message to open chat for node", data.node_id);
 					response.status = await handleOpenNodeChat(data.node_id, data.message_index);
 					break;
 				case Constants.REACT_UPDATE_NODE_SPACE_TITLE:
-					console.log("Received message to update node space title");
 					const nodeId = data.node_space_id;
 					const nodeTitle = data.new_title;
 					response.status = await updateNodeSpaceTitle(nodeId, nodeTitle);

@@ -21,8 +21,6 @@ const elk = new ELK();
  * @returns {Promise<Array>} - A promise that resolves to the laid-out nodes
  */
 export const getLayoutedNodes = async (nodes, edges) => {
-	console.log("Starting auto-layout of nodes:", nodes);
-
 	// Construct the graph object required by ELK
 	const graph = {
 		id: "root",
@@ -63,8 +61,6 @@ export const getLayoutedNodes = async (nodes, edges) => {
 	// Map the layouted positions back to the original nodes
 	const layoutedNodes = nodes.map((node) => {
 		const layoutedNode = layoutedGraph.children?.find((layoutedGraphNode) => layoutedGraphNode.id === node.id);
-		console.log("Finished auto-layout for node:", layoutedNode);
-
 		return {
 			...node,
 			position: {

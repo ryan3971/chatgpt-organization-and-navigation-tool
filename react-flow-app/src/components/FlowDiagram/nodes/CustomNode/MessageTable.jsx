@@ -20,7 +20,6 @@ const MessageTable = ({ node_id, messages, refs }) => {
 		// Create a ref for each message if not already created
 		messages.forEach((msg, index) => {
 			if (!refs.current[index]) {
-				console.log("Creating ref for index", index);
 				refs.current[index] = React.createRef();
 			}
 		});

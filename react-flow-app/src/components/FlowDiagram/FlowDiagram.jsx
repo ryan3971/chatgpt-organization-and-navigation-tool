@@ -1,6 +1,7 @@
 /*global chrome*/
 import {
 	Background,
+	BackgroundVariant,
 	Controls,
 	MiniMap,
 	ReactFlow,
@@ -58,8 +59,6 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 		if (!activeSpace) {
 			return;
 		}
-		console.log("Getting node data for space", activeSpace);
-
 		// Fetch node and edge data for the active space
 		sendMessageToBackground(Constants.GET_NODE_SPACE_DATA, { space_id: activeSpace })
 			.then((response) => {
@@ -71,7 +70,6 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 				const { nodesData, edgesData } = transformStorageData(response.data);
 				setNodes(nodesData);
 				setEdges(edgesData);
-				console.log("Set the nodes and edges from storage data");
 			})
 			.catch((error) => {
 				console.error("Unexpected error while retrieving node data:", error);
@@ -84,8 +82,6 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 		// Handle storage changes and update the nodes/edges or node spaces accordingly
 		function handleStorageChange(changes, namespace) {
 			for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-				console.log(`Storage key "${key}" in namespace "${namespace}" changed.`, `Old value was "${oldValue}", new value is "${newValue}".`);
-
 				switch (key) {
 					case Constants.NODE_SPACES_KEY:
 						if (!newValue) {
@@ -113,7 +109,6 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 						break;
 					}
 					default:
-						console.log("Change to storage does not impact current render");
 						break;
 				}
 			}
@@ -131,8 +126,6 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 	// Callback to handle selection changes in nodes
 	const onChange = useCallback(
 		({ nodes }) => {
-			console.log("useOnSelectionChange");
-
 			// Helper function to update the selected state of edges
 			function updateSelectedEdges(updatedEdges, connectedEdges, isEdgeSelected) {
 				return updatedEdges.map((edge) => {
@@ -174,7 +167,7 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 
 			// Fit the view to the new layout
 			window.requestAnimationFrame(() => {
-				fitView({ padding: 1, maxZoom: 1.5 }).then(() => console.log("Fitview called"));
+				fitView({ padding: 1, maxZoom: 1.5 });
 				setForceRender(true);
 			});
 		}
@@ -186,7 +179,6 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 			setNodes(nodes);
 			setEdges(edges);
 			setForceRender(false);
-			console.log("Forced render");
 		}
 	}, [forceRender, nodes, edges, setEdges, setNodes]);
 
@@ -203,9 +195,12 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 				onNodeContextMenu={onNodeContextMenu}
 				onPaneClick={onCloseContextMenu}
 			>
-				<MiniMap />
-				<Controls />
-				<Background />
+				<MiniMap className="" />
+				<Controls className="" />
+				<Background
+					className="bg-white"
+					variant={BackgroundVariant.Dots}
+				/>
 				{menu && (
 					<NodeContextMenu
 						onCloseContextMenu={onCloseContextMenu}

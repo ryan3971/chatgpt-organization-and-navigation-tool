@@ -21,8 +21,6 @@ const App = () => {
 
 	// useEffect to notify the Chrome extension that the React app has mounted
 	useEffect(() => {
-		console.log("Sending message to background script to notify that React app has mounted");
-
 		// Send a message to the background script to notify that the React app has mounted
 		sendMessageToBackground(Constants.REACT_APP_MOUNTED)
 			.then((response) => {
@@ -32,7 +30,6 @@ const App = () => {
 				}
 
 				// Extract node space data from the response
-				console.log("Received data from background script:", response.data);
 				const { node_space_keys, active_node_space } = response.data;
 				
 				// Update state with received node spaces and active space
@@ -46,13 +43,11 @@ const App = () => {
 
 	// Function to handle updating the active space
 	const handleUpdateActiveSpace = (spaceId) => {
-		console.log(`Selected workspace ID: ${spaceId}`);
 		setActiveSpace(spaceId);
 	};
 
 	// Function to handle updating the list of node spaces
 	const handleUpdateNodeSpaces = (spaces) => {
-		console.log("Updating node spaces", spaces);
 		setSpaces(spaces);
 	};
 

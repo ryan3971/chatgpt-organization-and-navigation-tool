@@ -286,7 +286,6 @@ export async function updateNodeTitle(nodeId, newTitle) {
 					console.error("Failed to save updated node title to storage");
 					return false;
 				}
-				console.log("Node title updated in storage:", newTitle);
 				return true;
 			}
 		}
@@ -360,7 +359,6 @@ export async function deleteNode(node_id, nodes = null, level = 0) {
 							console.error("Node space not deleted");
 							return false;
 						}
-						console.log("Node space deleted");
 						return true;
 					}
 					break;
@@ -372,11 +370,9 @@ export async function deleteNode(node_id, nodes = null, level = 0) {
 			const nodeBranchesIds = Object.keys(nodes[node_id].branches);
 			for (const branch_id of nodeBranchesIds) {
 				await deleteNode(branch_id, nodes, level + 1);
-				console.log("Branch deleted. ID was", branch_id);
 			}
 			if (level !== 0) delete nodes[node_id];	// Do not delete the original node yet
 
-			console.log("Node deleted. ID was:", node_id);
 		} else {
 			if (level === 0) {
 				console.warn("Node not found in storage. Node likely was not a stored node");

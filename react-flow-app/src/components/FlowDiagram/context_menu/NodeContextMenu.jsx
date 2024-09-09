@@ -25,8 +25,6 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 	 * Handles opening the chat for a node.
 	 */
 	const handleOpenChat = () => {
-		console.log("Opening chat for node", id);
-
 		// Close the context menu first
 		onCloseContextMenu();
 
@@ -51,8 +49,6 @@ export default function NodeContextMenu({ id, top, left, right, bottom, onCloseC
 	 * Handles opening the chat for a node.
 	 */
 	const handleDeleteChat = () => {
-		console.log("Deleting chat for node", id);
-
 		// Close the context menu first
 		onCloseContextMenu();
 

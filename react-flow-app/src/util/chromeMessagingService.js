@@ -17,13 +17,8 @@ export async function sendMessageToBackground(message_key, message_data = null) 
 	};
 
 	try {
-		console.log("Sending message to background script:", message);
-
 		// Send the message and wait for a response
 		const response = await chrome.runtime.sendMessage(message);
-
-		// Log and return the response
-		console.log("Received response from background script:", response);
 		return response;
 	} catch (error) {
 		console.error("Error occurred while sending message:", error);

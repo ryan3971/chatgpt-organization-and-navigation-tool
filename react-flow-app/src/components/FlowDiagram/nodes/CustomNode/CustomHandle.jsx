@@ -8,8 +8,6 @@ const CustomHandle = ({ node_id, targetRef, containerId, sourceHandle, messageLe
 
 	// useEffect to calculate and set the position of the handle relative to its target element
 	// This effect runs when the component mounts and whenever the targetRef, node_id, or containerId changes.
-	console.log("In CustomHandle with containerId: ", containerId);
-
 	useEffect(() => {
 		if (targetRef && targetRef.current) {
 			// Get the bounding box of the target element (e.g., a button)

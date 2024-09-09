@@ -74,14 +74,17 @@ async function checkAndHandleElements(observer, mutation) {
 		const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
 
 		if (stopButton && !stopButtonFound) {
-			console.log("Stop button appeared in the DOM.");
 			stopButtonFound = true;
+			// ID appears right after a message is sent in a new chat
+			if (tempStorage.node_type === Constants.NODE_TYPE_NEW_BRANCH) {
+				isCreatingNewBranch = true;
+			}
+
 		} else if (!stopButton && stopButtonFound) {
-			console.log("Stop button disappeared from the DOM.");
 			stopButtonFound = false;
 
 			if (tempStorage.node_type === Constants.NODE_TYPE_NEW_BRANCH) {
-				isCreatingNewBranch = true;
+				//isCreatingNewBranch = true;
 				const madeNewBranch = await createNewBranchNode(navPanel);
 				isCreatingNewBranch = false;
 				if (!madeNewBranch) return;
@@ -120,11 +123,9 @@ function handleNavPanel(navPanel) {
 function handleDeleteDialog(navPanel, dangerButton) {
 	try {
 		if (dangerButton && dangerButton.innerText.trim() === CHATGPT_BUTTON_DANGER_INNER_TEXT && !deleteDialogFound) {
-			console.log("Delete dialog appeared in the DOM");
 			deleteDialogFound = true;
 			navPanelNodeIds = getIDfromHref(navPanel.querySelectorAll(CHATGPT_HREF_ATTRIBUTE));
 		} else if ((!dangerButton || dangerButton.innerText.trim() !== CHATGPT_BUTTON_DANGER_INNER_TEXT) && deleteDialogFound) {
-			console.log("Delete dialog disappeared from the DOM");
 			deleteDialogFound = false;
 
 			setTimeout(() => {
@@ -132,10 +133,7 @@ function handleDeleteDialog(navPanel, dangerButton) {
 				const deletedNodeId = navPanelNodeIds.find((id) => !updatedNavPanelIds.includes(id));
 
 				if (deletedNodeId) {
-					console.log("Node deleted:", deletedNodeId);
 					sendMessage(Constants.HANDLE_NODE_DELETION, { node_id: deletedNodeId });
-				} else {
-					console.log("No node was deleted");
 				}
 				navPanelNodeIds = [];
 			}, 3000);
@@ -149,7 +147,6 @@ function handleDeleteDialog(navPanel, dangerButton) {
 function handleInputField(navPanel, inputField) {
 	try {
 		if (inputField && !inputFieldFound) {
-			console.log("Input field appeared in the DOM");
 			inputFieldFound = true;
 
 			const parentElement = inputField.closest(HTML_LIST_TAG);
@@ -157,7 +154,6 @@ function handleInputField(navPanel, inputField) {
 			const nodeTitle = parentElement.innerText;
 			renamedNodeData = { node_href: nodeHref, node_title: nodeTitle };
 		} else if (!inputField && inputFieldFound) {
-			console.log("Input field is not in the DOM anymore");
 			inputFieldFound = false;
 
 			setTimeout(() => {
@@ -166,12 +162,9 @@ function handleInputField(navPanel, inputField) {
 				const nodeTitle = navPanelElement.innerText;
 
 				if (nodeTitle !== renamedNodeData.node_title) {
-					console.log("Node title changed:", nodeTitle);
 					const nodeId = getIDfromHref([navPanelElement])[0];
 					tempStorage.node_title = nodeTitle;
 					sendMessage(Constants.UPDATE_NODE_TITLE, { node_id: nodeId, new_title: nodeTitle });
-				} else {
-					console.log("No node title change");
 				}
 				renamedNodeData = {};
 			}, 3000);
@@ -230,7 +223,6 @@ function observeTitleChange() {
 		const observer = new MutationObserver((mutationsList) => {
 			for (const mutation of mutationsList) {
 				if (mutation.type === "childList") {
-					console.log("Document title changed:", document.title);
 
 					ensureConstants();
 
@@ -258,8 +250,6 @@ observeTitleChange();
 
 /* Function to create a new branch node */
 async function createNewBranchNode(navPanel) {
-	console.log("Creating new branch node");
-
 	try {
 		// Wait for the node title to be updated in the nav panel and the url to update
 		await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -283,7 +273,6 @@ async function createNewBranchNode(navPanel) {
 			return false;
 		}
 
-		console.log("Branch node created successfully");
 		tempStorage.node_type = Constants.NODE_TYPE_EXISTING;
 		tempStorage.node_id = nodeId;
 		tempStorage.node_title = nodeTitle;
@@ -318,7 +307,6 @@ function getNodeMessages() {
 
 			turnNumber++;
 		}
-		console.log("Extracted Conversation Data:", nodeMessages);
 	} catch (error) {
 		console.error("Error in getNodeMessages:", error);
 	}
@@ -369,7 +357,6 @@ function findAncestorWithTestId(node) {
 }
 /* Function to focus on chat message based on data-testid attribute */
 async function focusChatMessageByTestId(message_index) {
-	console.log("Focusing on chat message:", message_index);
 	const containerId = CHATGPT_MESSAGE_CONTAINER_START + String(message_index + 2) + HTML_GENERIC_CLOSING;
 
 	const focusElement = () => {
@@ -377,7 +364,6 @@ async function focusChatMessageByTestId(message_index) {
 		if (element) {
 			element.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
 			element.focus();
-			console.log("Element found and focused:", containerId);
 			return true;
 		}
 		console.error("Element not found:", containerId);
@@ -386,7 +372,6 @@ async function focusChatMessageByTestId(message_index) {
 
 	if (focusElement()) return true;
 
-	console.log("Element not found, retrying in 3 seconds...");
 	await new Promise((resolve) => setTimeout(resolve, 3000));
 
 	return focusElement();
@@ -404,7 +389,6 @@ async function getPinnedMessage() {
 	try {
 		// Get the message element of the clicked element
 		const messageElement = findAncestorWithTestId(clickedElement);
-		console.log("Message Element:", messageElement);
 		// check if the clicked element is a message
 		if (messageElement.hasAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE)) {
 			const dataMessageId = messageElement.getAttribute(CHATGPT_DATA_TEST_ID_ATTRIBUTE);
@@ -412,8 +396,6 @@ async function getPinnedMessage() {
 
 			response.flag = Constants.VALID_PIN_MESSAGE;
 			response.data = pinnedMessageContainerId;
-
-			console.log("Pinned Message Container ID:", dataMessageId, pinnedMessageContainerId);
 		}
 	} catch (error) {
 		response.flag = Constants.INVALID_PIN_MESSAGE_SELECTION;
@@ -427,8 +409,6 @@ function getNodeTitle(node_id) {
 		const navPanel = document.querySelector(CHATGPT_NAV_PANEL_ELEMENT);
 		const href = CHATGPT_HREF_ATTRIBUTE_START + node_id + HTML_GENERIC_CLOSING;
 		const navPanelElements = navPanel.querySelector(href);
-
-		console.log("Node Title from Nav Panel:", navPanel, href, navPanelElements);
 
 		if (navPanelElements) {
 			return navPanelElements.innerText;
@@ -497,10 +477,7 @@ function showToast(message, type = "info") {
 async function sendMessage(message_key, message_data) {
 	const message = { action: message_key, node_data: tempStorage, data: message_data };
 
-	console.log("Sending message to Background script:", message);
-
 	try {
-		console.log("Sending message:", message_key);
 		const response = await chrome.runtime.sendMessage(message);
 		return response;
 	} catch (error) {
@@ -514,8 +491,6 @@ async function sendMessage(message_key, message_data) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	try {
 		const { action, data } = request;
-
-		console.log("Received message in Content Script:", request);
 
 		const response = { status: false, data: null };
 		switch (action) {

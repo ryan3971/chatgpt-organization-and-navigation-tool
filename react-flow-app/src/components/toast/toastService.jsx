@@ -27,11 +27,8 @@ export function showToast(message, type = "info") {
 		toastRoot = createRoot(container); // Create the root using React 18
 	}
 
-	console.log(`Showing toast message: ${message}`);
-	console.log(`Toast type: ${type}`);
 	// Get the corresponding border color based on the variant
 	const borderColor = borderColorMap[type] || borderColorMap.info;
-	console.log(`Toast border color: ${borderColor}`);
 	// Generate a unique ID for the toast component
 	const toastId = Math.random().toString(12);
 

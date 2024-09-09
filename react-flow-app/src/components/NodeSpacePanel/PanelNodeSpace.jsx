@@ -29,8 +29,6 @@ export const PanelNodeSpace = ({ id, onClick, title, imageUrl, activeSpace, info
 	useEffect(() => {
 		// Skip renaming if still editing or if the title hasn't changed
 		if (isEditing || titleText === infoText) return;
-		console.log("Renaming nodespace", id, titleText);
-
 		const data = {
 			node_space_id: id,
 			new_title: titleText,

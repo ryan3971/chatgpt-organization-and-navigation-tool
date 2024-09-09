@@ -61,7 +61,7 @@ const CustomNode = ({ id, data, selected }) => {
 		<div
 			className={`${
 				selected ? "border-blue-300 shadow-lg border-3" : "border-gray-200 shadow-sm border"
-			} bg-gray-100 rounded-full min-w-[12rem]`}
+			} bg-[#f4f4f4] rounded-full min-w-[12rem]`}
 			onDoubleClick={handleDoubleClick}
 		>
 			{/* Node Title */}
@@ -97,8 +97,6 @@ const CustomNode = ({ id, data, selected }) => {
 				const columnIndex = Math.floor(containerId / 2);
 				const targetRef = refs.current[columnIndex];
 				const sourceHandle = `${id}-s-${containerId}`;
-
-				console.log("Creating handle for container", containerId);
 
 				return (
 					<CustomHandle

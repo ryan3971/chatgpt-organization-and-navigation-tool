@@ -1,7 +1,7 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import { ListGroup, Offcanvas } from "react-bootstrap";
 import PropTypes from "prop-types";
-import gpt_image from "../../assets/gpt_logo.png";
+import gpt_image from "../../assets/react_icon.png";
 import PanelNodeSpace from "./PanelNodeSpace";
 
 /**
@@ -18,19 +18,19 @@ import PanelNodeSpace from "./PanelNodeSpace";
 const SidePanel = ({ isOpen, onClose, nodeSpaces, activeSpace, onChangeActiveSpace }) => {
 	return (
 		<Offcanvas
+			className="bg-[#f4f4f4]"
 			show={isOpen}
 			onHide={onClose}
 			placement="start"
 			style={{ width: "30%" }}
 		>
 			<Offcanvas.Header closeButton>
-				<Offcanvas.Title>Workspaces</Offcanvas.Title>
+				<Offcanvas.Title>Nodespaces</Offcanvas.Title>
 			</Offcanvas.Header>
 			<Offcanvas.Body>
 				<ListGroup>
 					{/* Iterate over the nodeSpaces object to render each node space */}
 					{Object.keys(nodeSpaces).map((spaceKey, index) => {
-						console.log("Space key", spaceKey);
 						const space = nodeSpaces[spaceKey];
 
 						return (

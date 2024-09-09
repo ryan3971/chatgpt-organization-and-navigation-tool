@@ -19,8 +19,6 @@ export default function useLayout() {
 
 	useEffect(() => {
 		if (nodesInitialized) {
-			console.log("Nodes initialized:", nodesInitialized);
-
 			// Function to layout nodes and update state
 			const layoutNodes = async () => {
 				const currentNodes = getNodes();

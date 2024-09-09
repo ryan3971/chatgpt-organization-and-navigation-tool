@@ -1,13 +1,13 @@
 {
 	"manifest_version": 3,
-	"name": "ChatGPT Navigator",
+	"name": "GPT Chat Nav Pro",
 	"version": "1.0",
 	"permissions": ["activeTab", "storage", "tabs", "contextMenus", "webNavigation", "unlimitedStorage"],
 	"icons": {
-		"16": "gpt_logo.png",
-		"32": "gpt_logo.png",
-		"48": "gpt_logo.png",
-		"128": "gpt_logo.png"
+		"16": "chrome_icon.png",
+		"32": "chrome_icon.png",
+		"48": "chrome_icon.png",
+		"128": "chrome_icon.png"
 	},
 	"background": {
 		"service_worker": "background.js",
@@ -24,10 +24,10 @@
 
 	"action": {
 		"default_icon": {
-			"16": "gpt_logo.png",
-			"32": "gpt_logo.png",
-			"48": "gpt_logo.png",
-			"128": "gpt_logo.png"
+			"16": "chrome_icon.png",
+			"32": "chrome_icon.png",
+			"48": "chrome_icon.png",
+			"128": "chrome_icon.png"
 		}
 	},
 

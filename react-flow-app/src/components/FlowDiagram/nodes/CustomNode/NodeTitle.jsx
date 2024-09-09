@@ -12,8 +12,6 @@ import PropTypes from "prop-types";
 const Title = ({ title }) => {
 	const titleRef = useRef(null); // Reference to the title div
 
-	console.log("Title rendering");
-
 	return (
 		<div
 			ref={titleRef}
