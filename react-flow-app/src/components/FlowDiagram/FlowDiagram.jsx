@@ -167,7 +167,7 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 
 			// Fit the view to the new layout
 			window.requestAnimationFrame(() => {
-				fitView({ padding: 1, maxZoom: 1.5 });
+				fitView({ padding: 1, maxZoom: 1.5, minZoom: 0.01 });
 				setForceRender(true);
 			});
 		}
@@ -194,6 +194,8 @@ const Flow = ({ activeSpace, handleUpdateNodeSpaces, handleUpdateActiveSpace }) 
 				onEdgesChange={onEdgesChange}
 				onNodeContextMenu={onNodeContextMenu}
 				onPaneClick={onCloseContextMenu}
+				maxZoom={1.5}
+				minZoom={0.01}
 			>
 				<MiniMap className="" />
 				<Controls className="" />
