@@ -9,7 +9,6 @@ A React-based visualization tool for ChatGPT conversations, enabling users to vi
 - [Key Components](#key-components)
 - [Architecture](#architecture)
 - [Technologies Used](#technologies-used)
-- [Installation](#installation)
 - [Usage](#usage)
 
 ## Overview
