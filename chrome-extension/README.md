@@ -5,7 +5,6 @@
 - [Project Structure](#project-structure)
 - [Key Components](#key-components)
 - [Technologies Used](#technologies-used)
-- [Installation](#installation)
 
 ## Overview
 ChatGPT Navigator is a Chrome extension that adds powerful conversation management features to ChatGPT. It allows users to organize chats into spaces, create branching conversations from existing points, and easily navigate between related discussions.
