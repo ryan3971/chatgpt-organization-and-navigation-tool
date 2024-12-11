@@ -26,21 +26,20 @@ This application provides a visual interface for exploring and managing ChatGPT 
 - Real-time synchronization with Chrome storage
 
 ## Project Structure
-react-flow-app/
-├── src/
-│ ├── components/
-│ │ ├── FlowDiagram/ # Main flow visualization components
-│ │ │ ├── nodes/ # Custom node components
-│ │ │ ├── edges/ # Custom edge components
-│ │ │ └── context_menu/ # Context menu components
-│ │ ├── NodeSpacePanel/ # Workspace management panel
-│ │ └── toast/ # Toast notification system
-│ ├── hooks/ # Custom React hooks
-│ ├── util/ # Utility functions
-│ └── assets/ # Static assets
-├── public/ # Public assets
+react-flow-app/  
+├── src/  
+│ ├── components/  
+│ │ ├── FlowDiagram/ # Main flow visualization components  
+│ │ │ ├── nodes/ # Custom node components  
+│ │ │ ├── edges/ # Custom edge components  
+│ │ │ └── context_menu/ # Context menu components  
+│ │ ├── NodeSpacePanel/ # Workspace management panel  
+│ │ └── toast/ # Toast notification system  
+│ ├── hooks/ # Custom React hooks  
+│ ├── util/ # Utility functions  
+│ └── assets/ # Static assets  
+├── public/ # Public assets  
 └── config files # Configuration files
-
 
 ## Key Components
 - **FlowDiagram**: Core visualization component using React Flow
