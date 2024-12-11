@@ -31,14 +31,14 @@ The extension follows a modular architecture with clear separation of concerns:
 
 ## Project Structure
 
-chrome-extension/
-├── background.js # Main background script
-├── background_helpers/ # Helper functions for background operations
-├── Constants/ # Shared constants and configuration
-├── content.js # Content script for ChatGPT page integration
-├── services/ # Shared services (storage, etc.)
-├── manifest.json # Extension configuration
-└── index.html # React application entry point
+chrome-extension/  
+├── background.js # Main background script  
+├── background_helpers/ # Helper functions for background operations  
+├── Constants/ # Shared constants and configuration  
+├── content.js # Content script for ChatGPT page integration  
+├── services/ # Shared services (storage, etc.)  
+├── manifest.json # Extension configuration  
+└── index.html # React application entry point  
 
 
 ## Key Components
