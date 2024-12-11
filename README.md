@@ -1,3 +1,7 @@
+# ChatGPT Organization and Navigation Tool
+
+A React-based visualization tool for ChatGPT conversations, enabling users to view and navigate complex conversation trees with an intuitive graph interface.
+
 ## Table of Contents
 - [Overview](#overview)
 - [Key Features](#key-features)
@@ -63,7 +67,6 @@ The application follows a component-based architecture with clear separation of 
 - **Tailwind CSS** (v3.4.8)
 - **Vite** (v5.3.4)
 - **Chrome Extension APIs**
-
 
 ## Usage
 The application integrates with Chrome as an extension, providing a visual interface for ChatGPT conversations. Users can:
