@@ -5,7 +5,6 @@
 - [Key Components](#key-components)
 - [Architecture](#architecture)
 - [Technologies Used](#technologies-used)
-- [Installation](#installation)
 - [Usage](#usage)
 
 ## Overview
@@ -27,7 +26,7 @@ react-flow-app/
 │ ├── components/  
 │ │ ├── FlowDiagram/ # Main flow visualization components  
 │ │ │ ├── nodes/ # Custom node components  
-│ │ │ ├── edges/ # Custom edge componentsv
+│ │ │ ├── edges/ # Custom edge componentsv  
 │ │ │ └── context_menu/ # Context menu components  
 │ │ ├── NodeSpacePanel/ # Workspace management panel  
 │ │ └── toast/ # Toast notification system  
